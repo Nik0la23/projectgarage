@@ -1,0 +1,57 @@
+---
+description: Project architecture and conventions - always active
+globs: **/*
+alwaysApply: true
+---
+
+# ProjectGarage - Project Context
+
+You are working on ProjectGarage, a Next.js 15 car buying assistant app.
+
+## Tech Stack
+- Next.js 15 (App Router only, no Pages Router)
+- React 19
+- TypeScript (strict mode)
+- Tailwind CSS v4
+- shadcn/ui components
+- Lucide-React icons
+- Vercel hosting (free tier)
+
+## Data Strategy: 3-Tier Hybrid API
+
+```
+1. NHTSA vPIC API (free) → Make/model validation, always current
+2. CarQuery API (free)   → Detailed specs, best for 1995-2022
+3. Claude AI fallback    → New cars 2023+, label as "AI-Generated"
+```
+
+## Architecture: Hybrid (Atomic UI + Feature-based Business Logic)
+
+```
+src/
+├── app/                    # Routes only, minimal logic
+├── features/               # Business logic modules
+│   └── [feature]/
+│       ├── components/     # Feature-specific UI
+│       ├── hooks/
+│       ├── services/       # API calls
+│       ├── actions/        # Server Actions
+│       └── types.ts
+├── shared/
+│   └── ui/                 # Atomic Design
+│       ├── atoms/          # Button, Input, Badge
+│       ├── molecules/      # SearchInput, StatDisplay
+│       └── organisms/      # Header, Footer
+├── lib/                    # Utilities (utils.ts, storage.ts)
+└── types/                  # Shared types
+```
+
+## Naming Conventions
+- Directories: `kebab-case`
+- Components: `PascalCase.tsx`
+- Hooks: `use-camel-case.ts`
+- Types: `PascalCaseSuffix` (ButtonProps, CarResponse, CreateCarInput)
+
+## Current Version: V1
+Focus: Single car lookup, basic/advanced specs, localStorage history, Vercel deployment.
+See `ROADMAP.md` for full version plan and API documentation.

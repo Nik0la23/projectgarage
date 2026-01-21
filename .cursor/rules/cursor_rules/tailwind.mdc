@@ -1,0 +1,92 @@
+---
+description: Tailwind CSS v4 styling patterns
+globs: **/*.{tsx,css}
+alwaysApply: false
+---
+
+# Tailwind CSS v4 Rules
+
+## The cn() Utility (Required)
+
+Always use for combining classes:
+
+```tsx
+import { cn } from '@/lib/utils'
+
+<div className={cn('base-classes', conditional && 'conditional-class', className)} />
+```
+
+```typescript
+// lib/utils.ts
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+## Component Variants with CVA
+
+```typescript
+import { cva, type VariantProps } from 'class-variance-authority'
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+  {
+    variants: {
+      variant: {
+        primary: 'bg-primary text-white hover:bg-primary/90',
+        secondary: 'bg-secondary text-secondary-foreground',
+        ghost: 'hover:bg-accent',
+      },
+      size: {
+        sm: 'h-9 px-3 text-sm',
+        md: 'h-10 px-4',
+        lg: 'h-11 px-6 text-lg',
+      },
+    },
+    defaultVariants: { variant: 'primary', size: 'md' },
+  }
+)
+
+interface ButtonProps 
+  extends React.ComponentProps<'button'>,
+    VariantProps<typeof buttonVariants> {}
+
+export function Button({ className, variant, size, ...props }: ButtonProps) {
+  return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
+}
+```
+
+## Lucide Icons
+
+```tsx
+// ✅ Import individually (tree-shaking)
+import { Search, ChevronRight } from 'lucide-react'
+
+// ✅ Use size-* and inherit color
+<Search className="size-5 text-muted-foreground" />
+```
+
+Sizes: `size-4` inline, `size-5` buttons, `size-6` nav
+
+## Forbidden Patterns
+
+```tsx
+// ❌ Never construct classes dynamically
+className={`bg-${color}-500`}
+
+// ❌ Never import all icons
+import * as Icons from 'lucide-react'
+
+// ❌ Avoid @apply in components (use utilities)
+```
+
+## Class Order Convention
+
+Layout → Position → Size → Spacing → Typography → Colors → Effects → States
+
+```tsx
+className="flex items-center absolute top-0 size-10 p-2 text-sm text-gray-600 bg-white shadow-sm hover:bg-gray-50"
+```

@@ -1,0 +1,85 @@
+---
+description: React component patterns
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# React Component Rules
+
+## Component Structure
+
+```tsx
+// 1. Directive (if needed)
+'use client'
+
+// 2. Imports
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/shared/ui/atoms'
+
+// 3. Types
+interface CardProps {
+  title: string
+  children: React.ReactNode
+  className?: string
+}
+
+// 4. Component
+export function Card({ title, children, className }: CardProps) {
+  return (
+    <div className={cn('rounded-lg border p-4', className)}>
+      <h2 className="font-semibold">{title}</h2>
+      {children}
+    </div>
+  )
+}
+```
+
+## Props Typing
+
+- Use `interface` for props (not `type`)
+- Always accept `className?: string` for styling flexibility
+- Extend native elements when wrapping them:
+
+```tsx
+interface ButtonProps extends React.ComponentProps<'button'> {
+  variant?: 'primary' | 'secondary'
+}
+```
+
+## Composition Pattern
+
+Pass Server Components as children to Client Components:
+
+```tsx
+// page.tsx (Server)
+<ClientWrapper>
+  <ServerData />  {/* Still renders on server */}
+</ClientWrapper>
+```
+
+## Forbidden Patterns
+
+```tsx
+// ❌ Never use any
+const data: any = response
+
+// ❌ Never inline objects in JSX (causes re-renders)
+<Component style={{ color: 'red' }} />
+
+// ❌ Never use index as key for dynamic lists
+{items.map((item, i) => <Item key={i} />)}
+
+// ✅ Use stable identifiers
+{items.map(item => <Item key={item.id} />)}
+```
+
+## Event Handlers
+
+Prefix with `handle`, name describes action:
+
+```tsx
+const handleSubmit = () => {}
+const handleSearchChange = () => {}
+const handleCarSelect = () => {}
+```

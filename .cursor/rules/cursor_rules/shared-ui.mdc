@@ -1,0 +1,135 @@
+---
+description: Atomic Design for shared UI components
+globs: shared/ui/**/*
+alwaysApply: false
+---
+
+# Shared UI (Atomic Design) Rules
+
+## Structure
+
+```
+shared/ui/
+├── atoms/           # Indivisible elements
+│   ├── Button.tsx
+│   ├── Input.tsx
+│   ├── Badge.tsx
+│   ├── Spinner.tsx
+│   └── index.ts
+├── molecules/       # Groups of atoms
+│   ├── SearchInput.tsx    # Input + Button + Icon
+│   ├── StatDisplay.tsx    # Label + Value + Icon
+│   ├── FormField.tsx      # Label + Input + Error
+│   └── index.ts
+├── organisms/       # Complex sections
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   └── index.ts
+└── index.ts         # Root barrel export
+```
+
+## Atom Example
+
+```tsx
+// shared/ui/atoms/Button.tsx
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+  {
+    variants: {
+      variant: {
+        primary: 'bg-primary text-white hover:bg-primary/90',
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+      },
+      size: {
+        sm: 'h-9 px-3 text-sm',
+        md: 'h-10 px-4',
+        lg: 'h-11 px-6',
+      },
+    },
+    defaultVariants: { variant: 'primary', size: 'md' },
+  }
+)
+
+interface ButtonProps
+  extends React.ComponentProps<'button'>,
+    VariantProps<typeof buttonVariants> {}
+
+export function Button({ className, variant, size, ...props }: ButtonProps) {
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  )
+}
+```
+
+## Molecule Example
+
+```tsx
+// shared/ui/molecules/SearchInput.tsx
+'use client'
+
+import { Search } from 'lucide-react'
+import { Input } from '../atoms/Input'
+import { Button } from '../atoms/Button'
+import { cn } from '@/lib/utils'
+
+interface SearchInputProps {
+  value: string
+  onChange: (value: string) => void
+  onSearch: () => void
+  placeholder?: string
+  className?: string
+}
+
+export function SearchInput({
+  value,
+  onChange,
+  onSearch,
+  placeholder = 'Search...',
+  className,
+}: SearchInputProps) {
+  return (
+    <div className={cn('flex gap-2', className)}>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+      />
+      <Button onClick={onSearch} size="md">
+        <Search className="size-4" />
+      </Button>
+    </div>
+  )
+}
+```
+
+## Barrel Exports
+
+```typescript
+// shared/ui/atoms/index.ts
+export { Button } from './Button'
+export { Input } from './Input'
+export { Badge } from './Badge'
+export { Spinner } from './Spinner'
+
+// shared/ui/index.ts
+export * from './atoms'
+export * from './molecules'
+export * from './organisms'
+```
+
+## Rules
+
+1. **Atoms**: No business logic, pure presentation
+2. **Molecules**: Combine atoms, minimal state
+3. **Organisms**: Can have local state, still no business logic
+4. **Never import from features** - shared UI is business-agnostic
+5. **Always accept className prop** for flexibility
+6. **Use CVA for variants** in atoms

@@ -1,0 +1,115 @@
+---
+description: Feature module organization
+globs: features/**/*
+alwaysApply: false
+---
+
+# Feature Module Rules
+
+## Structure
+
+```
+features/
+└── car-lookup/              # Feature name in kebab-case
+    ├── components/          # Feature-specific UI
+    │   ├── CarSearchBar.tsx
+    │   ├── CarSpecsPanel.tsx
+    │   └── index.ts         # Barrel export
+    ├── hooks/
+    │   └── use-car-data.ts
+    ├── actions/
+    │   └── search.ts        # Server Actions
+    ├── services/
+    │   └── car-api.ts       # API calls
+    ├── types.ts             # Feature types
+    └── index.ts             # Public API
+```
+
+## Public API (index.ts)
+
+Only export what other modules need:
+
+```typescript
+// features/car-lookup/index.ts
+
+// Components
+export { CarSearchBar } from './components'
+export { CarSpecsPanel } from './components'
+
+// Hooks
+export { useCarData } from './hooks/use-car-data'
+
+// Types
+export type { Car, CarSpecs } from './types'
+
+// Actions (if used externally)
+export { searchCar } from './actions/search'
+```
+
+## Types File
+
+```typescript
+// features/car-lookup/types.ts
+
+export interface Car {
+  id: string
+  make: string
+  model: string
+  year: number
+  specs: CarSpecs
+}
+
+export interface CarSpecs {
+  engine: string
+  horsepower: number
+  transmission: string
+  fuelType: string
+  mpgCity: number
+  mpgHighway: number
+}
+
+export interface CarSearchParams {
+  make?: string
+  model?: string
+  year?: number
+}
+```
+
+## Services (API Calls)
+
+```typescript
+// features/car-lookup/services/car-api.ts
+
+import type { Car, CarSearchParams } from '../types'
+
+const API_BASE = '/api/car'
+
+export async function fetchCar(id: string): Promise<Car> {
+  const res = await fetch(`${API_BASE}/${id}`)
+  if (!res.ok) throw new Error('Failed to fetch car')
+  return res.json()
+}
+
+export async function searchCars(params: CarSearchParams): Promise<Car[]> {
+  const query = new URLSearchParams(params as Record<string, string>)
+  const res = await fetch(`${API_BASE}?${query}`)
+  if (!res.ok) throw new Error('Search failed')
+  return res.json()
+}
+```
+
+## Import Rules
+
+```typescript
+// ✅ Import from feature's public API
+import { CarSearchBar, useCarData } from '@/features/car-lookup'
+
+// ❌ Never reach into feature internals
+import { CarSearchBar } from '@/features/car-lookup/components/CarSearchBar'
+```
+
+## Feature Isolation
+
+- Features should not import from other features directly
+- Share code via `shared/` or `lib/`
+- If two features need the same thing, lift it to shared

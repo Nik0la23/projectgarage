@@ -1,0 +1,95 @@
+---
+description: Next.js 15 App Router patterns
+globs: app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Next.js 15 App Router Rules
+
+## Server vs Client Components
+
+**Default is Server Component.** Add `'use client'` ONLY when you need:
+- useState, useReducer, useEffect
+- Browser APIs (localStorage, window)
+- Event handlers (onClick, onChange)
+- Client-only libraries
+
+```tsx
+// ✅ Client directive at top, before imports
+'use client'
+
+import { useState } from 'react'
+```
+
+## API Routes (route.ts)
+
+**CRITICAL: params is async in Next.js 15**
+
+```typescript
+// app/api/car/[id]/route.ts
+import { NextRequest } from 'next/server'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params  // MUST await
+  return Response.json({ id })
+}
+```
+
+## Page Props
+
+**CRITICAL: params and searchParams are async in Next.js 15**
+
+```tsx
+// app/car/[id]/page.tsx
+interface PageProps {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}
+
+export default async function Page({ params, searchParams }: PageProps) {
+  const { id } = await params
+  const { query } = await searchParams
+  // ...
+}
+```
+
+## Loading & Error States
+
+- `loading.tsx` - Suspense fallback (can be Server Component)
+- `error.tsx` - MUST be `'use client'`
+- `not-found.tsx` - Trigger with `notFound()`
+
+## Metadata
+
+```typescript
+import type { Metadata } from 'next'
+
+// Static
+export const metadata: Metadata = {
+  title: { default: 'ProjectGarage', template: '%s | ProjectGarage' },
+  description: 'Find your perfect car',
+}
+
+// Dynamic
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
+  return { title: `Car ${id}` }
+}
+```
+
+## Vercel Free Tier Constraints
+
+```typescript
+// Prefer static/ISR over SSR
+export const revalidate = 3600  // ISR: revalidate hourly
+
+// Cache API responses
+return Response.json(data, {
+  headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' }
+})
+```
+
+**Limits:** 10s function execution, 1024MB memory, 100GB bandwidth/month

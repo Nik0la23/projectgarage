@@ -1,0 +1,99 @@
+---
+description: TypeScript strict mode patterns
+globs: **/*.{ts,tsx}
+alwaysApply: false
+---
+
+# TypeScript Rules
+
+## Type vs Interface
+
+```typescript
+// ✅ interface for objects and props
+interface UserProps {
+  name: string
+  age: number
+}
+
+// ✅ type for unions and utilities
+type Status = 'idle' | 'loading' | 'error'
+type WithId<T> = T & { id: string }
+```
+
+## Naming Conventions
+
+- Props: `{Component}Props` → `ButtonProps`, `CarCardProps`
+- API Response: `{Resource}Response` → `CarResponse`
+- API Input: `{Action}{Resource}Input` → `CreateCarInput`
+- State: `{Feature}State` → `SearchState`
+
+## Strict Mode Patterns
+
+```typescript
+// ❌ Never use any
+const data: any = response
+
+// ✅ Use unknown and narrow
+const data: unknown = await response.json()
+if (isCarData(data)) {
+  console.log(data.make)
+}
+
+// ✅ Array access is T | undefined (noUncheckedIndexedAccess)
+const cars: Car[] = []
+const first = cars[0]  // Car | undefined
+if (first) {
+  console.log(first.name)
+}
+
+// ✅ Nullish coalescing for defaults
+const value = config.optional ?? 'default'
+```
+
+## Type Guards
+
+```typescript
+function isCarData(data: unknown): data is Car {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'make' in data &&
+    'model' in data
+  )
+}
+```
+
+## API Response Types
+
+```typescript
+// Consistent API response wrapper
+interface ApiResponse<T> {
+  data: T
+  error?: string
+}
+
+interface ApiError {
+  message: string
+  code: string
+}
+```
+
+## Zod for Runtime Validation
+
+```typescript
+import { z } from 'zod'
+
+const CarSchema = z.object({
+  make: z.string(),
+  model: z.string(),
+  year: z.number().min(1900).max(2030),
+})
+
+type Car = z.infer<typeof CarSchema>
+
+// Validate unknown data
+const result = CarSchema.safeParse(data)
+if (result.success) {
+  // result.data is typed as Car
+}
+```

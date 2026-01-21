@@ -1,0 +1,91 @@
+---
+description: Server Actions patterns
+globs: features/**/actions/*.ts, app/**/actions.ts
+alwaysApply: false
+---
+
+# Server Actions Rules
+
+## Basic Structure
+
+```typescript
+'use server'
+
+import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
+
+const schema = z.object({
+  make: z.string().min(1),
+  model: z.string().min(1),
+})
+
+export async function searchCar(formData: FormData) {
+  // 1. Validate input
+  const validated = schema.safeParse({
+    make: formData.get('make'),
+    model: formData.get('model'),
+  })
+
+  if (!validated.success) {
+    return { error: validated.error.flatten().fieldErrors }
+  }
+
+  // 2. Perform action
+  const result = await fetchCarData(validated.data)
+
+  // 3. Revalidate if needed
+  revalidatePath('/search')
+
+  // 4. Return result
+  return { data: result }
+}
+```
+
+## Return Type Pattern
+
+```typescript
+type ActionResult<T> = 
+  | { data: T; error?: never }
+  | { data?: never; error: string }
+
+export async function getCarDetails(id: string): Promise<ActionResult<Car>> {
+  try {
+    const car = await fetchCar(id)
+    return { data: car }
+  } catch {
+    return { error: 'Failed to fetch car details' }
+  }
+}
+```
+
+## Usage in Components
+
+```tsx
+'use client'
+
+import { useActionState } from 'react'
+import { searchCar } from './actions'
+
+export function SearchForm() {
+  const [state, action, pending] = useActionState(searchCar, null)
+
+  return (
+    <form action={action}>
+      <input name="make" />
+      <input name="model" />
+      <button disabled={pending}>
+        {pending ? 'Searching...' : 'Search'}
+      </button>
+      {state?.error && <p className="text-red-500">{state.error}</p>}
+    </form>
+  )
+}
+```
+
+## Rules
+
+- Always validate with Zod
+- Use for mutations, not data fetching
+- Call `revalidatePath`/`revalidateTag` after mutations
+- Place `redirect()` outside try/catch blocks
+- Return serializable data only (no class instances)

@@ -1,0 +1,114 @@
+---
+description: SSR-safe localStorage patterns
+globs: lib/**/*.ts, features/**/*.ts, **/*storage*.ts
+alwaysApply: false
+---
+
+# localStorage Rules (SSR-Safe)
+
+## The Problem
+
+localStorage doesn't exist on the server. Accessing it during SSR causes hydration mismatches.
+
+## Solution: useLocalStorage Hook
+
+```typescript
+// lib/hooks/use-local-storage.ts
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, (value: T | ((prev: T) => T)) => void] {
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
+
+  // Hydrate from localStorage AFTER mount
+  useEffect(() => {
+    try {
+      const item = localStorage.getItem(key)
+      if (item) setStoredValue(JSON.parse(item))
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error)
+    }
+  }, [key])
+
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    try {
+      const newValue = value instanceof Function ? value(storedValue) : value
+      localStorage.setItem(key, JSON.stringify(newValue))
+      setStoredValue(newValue)
+    } catch (error) {
+      console.warn(`Error setting localStorage key "${key}":`, error)
+    }
+  }, [key, storedValue])
+
+  return [storedValue, setValue]
+}
+```
+
+## Prevent Hydration Mismatch
+
+```tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+
+export function SearchHistory() {
+  const [mounted, setMounted] = useState(false)
+  const [history] = useLocalStorage<string[]>('search-history', [])
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Return placeholder until client hydration
+  if (!mounted) return <div className="h-20" />
+
+  return (
+    <ul>
+      {history.map(item => <li key={item}>{item}</li>)}
+    </ul>
+  )
+}
+```
+
+## Type-Safe Storage Utility
+
+```typescript
+// lib/storage.ts
+const IS_SERVER = typeof window === 'undefined'
+
+export const storage = {
+  get<T>(key: string): T | null {
+    if (IS_SERVER) return null
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : null
+    } catch {
+      return null
+    }
+  },
+
+  set<T>(key: string, value: T): void {
+    if (IS_SERVER) return
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+
+  remove(key: string): void {
+    if (IS_SERVER) return
+    localStorage.removeItem(key)
+  },
+}
+```
+
+## Storage Keys (Centralize)
+
+```typescript
+// lib/storage-keys.ts
+export const STORAGE_KEYS = {
+  SEARCH_HISTORY: 'projectgarage-search-history',
+  RECENT_CARS: 'projectgarage-recent-cars',
+  USER_PREFERENCES: 'projectgarage-preferences',
+} as const
+```
