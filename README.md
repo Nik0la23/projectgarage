@@ -1,36 +1,206 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ProjectGarage 🚗
+
+> Your intelligent car buying assistant - Find detailed technical specifications for any car instantly.
+
+## Overview
+
+ProjectGarage is a Next.js 15 web application that helps users find comprehensive technical specifications for any car. Using a hybrid 3-tier API strategy, it provides accurate data from official sources and AI-generated specs for newer vehicles.
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript (strict mode)
+- **Styling:** Tailwind CSS v4
+- **UI Components:** shadcn/ui
+- **Icons:** Lucide React
+- **Deployment:** Vercel (free tier)
+
+## Data Strategy: 3-Tier Hybrid API
+
+```
+┌───────────────────────────────────────┐
+│  TIER 1: NHTSA vPIC API (Free)        │
+│  - Validates make/model/year exists   │
+│  - Always current (2025/2026 data)    │
+└───────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────┐
+│  TIER 2: CarQuery API (Free)          │
+│  - Detailed specs (HP, MPG, etc.)     │
+│  - Best for: 1995-2022 vehicles       │
+└───────────────────────────────────────┘
+        ↓ (if no specs found)
+┌───────────────────────────────────────┐
+│  TIER 3: Groq AI Fallback (Llama 3.3) │
+│  - Generate specs for 2023+ cars      │
+│  - Labeled as "AI-Generated"          │
+└───────────────────────────────────────┘
+```
+
+## Project Architecture
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   │   ├── years/
+│   │   ├── makes/
+│   │   ├── models/
+│   │   ├── car/specs/
+│   │   └── ai/generate-specs/
+│   ├── layout.tsx
+│   └── page.tsx
+├── features/              # Feature modules
+│   └── car-lookup/
+│       ├── components/    # CarSearchForm, CarSpecsPanel
+│       ├── hooks/         # useCarData, useSearchHistory
+│       ├── services/      # API integrations
+│       └── types.ts
+├── shared/
+│   └── ui/               # Atomic design components
+├── components/           # shadcn/ui components
+│   └── ui/
+├── lib/                  # Utilities
+│   ├── utils.ts
+│   └── storage.ts        # localStorage helpers
+└── types/               # Shared TypeScript types
+    └── car.ts
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- npm or pnpm
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd projectgarage
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. (Optional) Set up environment variables:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Add your Groq API key if you want AI-generated specs for 2023+ vehicles:
+```
+GROQ_API_KEY=your_api_key_here
+```
 
-## Learn More
+4. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📄 **[V1 Technical Specifications](./V1_SPECIFICATIONS.md)** - Complete V1 feature documentation, architecture, and implementation details
 
-## Deploy on Vercel
+📋 **[Future Roadmap](./src/ROADMAP.md)** - Planned features for V2 and beyond
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features (V1 - MVP)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+✅ **Single Car Lookup**
+- Cascading dropdowns (Make → Model → Year → Trim)
+- **75 legitimate car manufacturers** (filtered from 12,000+ NHTSA entries)
+- **Dynamic year filtering** - shows only years when model was available
+- Real-time data fetching
+- Auto-submit when all fields selected
+
+✅ **Smart Filtering**
+- Only shows actual car manufacturers
+- Excludes motorcycles, trailers, custom shops
+- See `CAR_MANUFACTURERS_FILTER.md` for details
+
+✅ **Technical Specifications Display**
+- Tabbed interface (Overview / Engine / Fuel / Dimensions)
+- Verified data badge (CarQuery) or AI-generated (Groq)
+- Comprehensive specs: engine, fuel, dimensions, performance
+
+✅ **Search History**
+- localStorage-based history
+- Persistent across sessions
+- Quick access to recent searches
+
+## API Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/years` | GET | Get available years (1995-current+1) |
+| `/api/makes?year=2024` | GET | Get makes for a specific year |
+| `/api/models?year=2024&make=bmw` | GET | Get models for make and year |
+| `/api/car/specs?year=2024&make=bmw&model=m3` | GET | Get full specifications |
+| `/api/ai/generate-specs` | POST | Generate AI specs (fallback) |
+
+## Development
+
+### Project Rules
+
+This project follows strict architectural conventions defined in `.cursor/rules/`:
+
+- **Hybrid Architecture:** Atomic UI + Feature-based business logic
+- **Feature Isolation:** Each feature is self-contained
+- **Server Components First:** Only use `'use client'` when necessary
+- **TypeScript Strict:** No `any` types allowed
+- **Naming Conventions:** kebab-case dirs, PascalCase components
+
+See `.cursor/rules/cursor_rules/global.mdc` for complete guidelines.
+
+### Adding a New Feature
+
+1. Create feature directory: `src/features/feature-name/`
+2. Add subdirectories: `components/`, `hooks/`, `services/`, `types.ts`
+3. Create `index.ts` for public API exports
+4. Follow naming conventions and import rules
+
+## Deployment
+
+This project is configured for Vercel deployment:
+
+```bash
+npm run build
+```
+
+Deploy to Vercel:
+```bash
+vercel
+```
+
+### Vercel Free Tier Limits
+- 10s function execution time
+- 1024MB memory
+- 100GB bandwidth/month
+
+## Roadmap
+
+See [ROADMAP.md](./src/ROADMAP.md) for the complete product roadmap including:
+
+- **V2:** AI Car Finder & Multi-car Comparison
+- **V3:** AI Analysis & Worth Buying Score
+- **V4:** User Accounts & Cloud Sync
+- **V5+:** Monetization & Scale
+
+## Contributing
+
+This is a personal project, but suggestions and feedback are welcome!
+
+## License
+
+MIT
+
+---
+
+**Current Version:** V1 (MVP)  
+**Last Updated:** February 2026
