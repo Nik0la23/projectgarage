@@ -103,6 +103,7 @@ async function fetchFromSubreddit(
         'Accept': 'application/json',
       },
       signal: controller.signal,
+      cache: 'no-store', // Prevent Next.js caching issues
     })
     clearTimeout(timeoutId)
     console.log(`[Reddit] Response status: ${response.status} ${response.statusText}`)
