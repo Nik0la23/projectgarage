@@ -64,8 +64,12 @@ After deployment completes, you'll get:
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `GROQ_API_KEY` | Yes | AI-generated specs for 2023+ vehicles |
+| `GROQ_API_KEY` | Yes | AI-generated specs for 2023+ vehicles & reliability analysis |
+| `BRAVE_API_KEY` | Optional | Web article search for reliability analysis (Reddit works without it) |
+| `ENABLE_EDMUNDS_SCRAPING` | Optional | Feature flag for Edmunds scraping (default: false) |
 | `NEXT_PUBLIC_BASE_URL` | Auto-set | Vercel sets this automatically |
+
+**Note**: The reliability analysis feature will work with just Reddit data if `BRAVE_API_KEY` is not provided.
 
 ## Vercel Free Tier Limits
 
