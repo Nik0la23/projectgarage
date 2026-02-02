@@ -2,6 +2,7 @@
 // Coordinates all data sources, caching, and AI analysis
 
 import { fetchRedditDiscussions } from './sources/reddit'
+import { fetchRedditDiscussionsRSS } from './sources/reddit-rss'
 import { fetchBraveArticles } from './sources/brave'
 import { fetchEdmundsReviews } from './sources/edmunds'
 import { analyzeCarReliability as runGroqAnalysis } from './groq-analyzer'
@@ -31,7 +32,8 @@ export async function analyzeCarReliability(
   const startTime = Date.now()
   
   const results = await Promise.allSettled([
-    fetchRedditDiscussions(make, model, year),
+    // Try RSS fallback first (less likely to be blocked on Vercel)
+    fetchRedditDiscussionsRSS(make, model, year),
     fetchBraveArticles(make, model, year),
     fetchEdmundsReviews(make, model, year),
   ])
