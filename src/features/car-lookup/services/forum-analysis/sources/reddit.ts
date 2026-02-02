@@ -91,15 +91,26 @@ async function fetchFromSubreddit(
 
   console.log(`[Reddit] Fetching from: ${url.toString()}`)
   
-  const response = await fetch(url.toString(), {
-    headers: {
-      'User-Agent': 'ProjectGarage/1.0 (Car Research Tool)',
-      'Accept': 'application/json',
-    },
-    signal: AbortSignal.timeout(10000), // 10 second timeout
-  })
+  // Create abort controller for timeout (more compatible than AbortSignal.timeout)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000)
   
-  console.log(`[Reddit] Response status: ${response.status} ${response.statusText}`)
+  let response: Response
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ProjectGarage/1.0; +https://projectgarage.vercel.app)',
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    console.log(`[Reddit] Response status: ${response.status} ${response.statusText}`)
+  } catch (error) {
+    clearTimeout(timeoutId)
+    console.error(`[Reddit] Fetch error:`, error instanceof Error ? error.message : 'Unknown')
+    throw error
+  }
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'No error text')
