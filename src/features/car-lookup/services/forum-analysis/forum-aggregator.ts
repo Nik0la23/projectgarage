@@ -49,11 +49,18 @@ export async function analyzeCarReliability(
   const edmundsReviews: ForumSource[] = 
     results[2].status === 'fulfilled' ? results[2].value : []
 
-  // Log any failures
+  // Log any failures with detailed information
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
       const sourceName = ['Reddit', 'Brave', 'Edmunds'][index]
-      console.warn(`[Orchestrator] ${sourceName} failed:`, result.reason)
+      console.error(`[Orchestrator] ${sourceName} failed:`, result.reason)
+      if (result.reason instanceof Error) {
+        console.error(`[Orchestrator] ${sourceName} error details:`, {
+          name: result.reason.name,
+          message: result.reason.message,
+          stack: result.reason.stack
+        })
+      }
     }
   })
 

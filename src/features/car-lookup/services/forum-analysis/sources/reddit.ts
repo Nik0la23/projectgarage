@@ -55,7 +55,13 @@ export async function fetchRedditDiscussions(
       }
     } catch (error) {
       // Continue with other subreddits if one fails
-      console.warn(`[Reddit] Failed to fetch from r/${subreddit}:`, error instanceof Error ? error.message : 'Unknown error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`[Reddit] Failed to fetch from r/${subreddit}:`, errorMessage)
+      
+      // Log more details for debugging
+      if (error instanceof Error) {
+        console.error(`[Reddit] Error stack:`, error.stack)
+      }
     }
   }
 
@@ -83,18 +89,34 @@ async function fetchFromSubreddit(
   url.searchParams.set('restrict_sr', '1') // Restrict to this subreddit
   url.searchParams.set('t', 'all') // All time
 
+  console.log(`[Reddit] Fetching from: ${url.toString()}`)
+  
   const response = await fetch(url.toString(), {
     headers: {
       'User-Agent': 'ProjectGarage/1.0 (Car Research Tool)',
       'Accept': 'application/json',
     },
+    signal: AbortSignal.timeout(10000), // 10 second timeout
   })
+  
+  console.log(`[Reddit] Response status: ${response.status} ${response.statusText}`)
 
   if (!response.ok) {
-    throw new Error(`Reddit API error: ${response.status}`)
+    const errorText = await response.text().catch(() => 'No error text')
+    console.error(`[Reddit] API error ${response.status}:`, errorText)
+    throw new Error(`Reddit API error: ${response.status} - ${response.statusText}`)
   }
 
   const data: RedditResponse = await response.json()
+  
+  // Validate response structure
+  if (!data || !data.data || !data.data.children) {
+    console.error(`[Reddit] Invalid response structure from r/${subreddit}:`, JSON.stringify(data).slice(0, 200))
+    throw new Error('Invalid Reddit API response structure')
+  }
+  
+  console.log(`[Reddit] r/${subreddit} returned ${data.data.children.length} raw posts`)
+  
   const posts: ForumSource[] = []
 
   // Parse and filter posts
