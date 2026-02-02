@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       }
       
           return {
-            trimId: trim.model_id,
+            trimId: `${trim.model_id}-${trim.model_trim.replace(/\s+/g, '-').toLowerCase()}`,
             trimName: trim.model_trim,
             displayName: displayName || trim.model_trim,
             dataSource: 'verified',

@@ -72,6 +72,13 @@ Return ONLY a valid JSON object with these fields (use null for unknown values):
   "height": number (mm),
   "wheelbase": number (mm),
   "curbWeight": number (lbs),
+  "cargoVolume": number (liters),
+  "trunkCapacity": number (liters),
+  "tireSize": "tire size specification (e.g., '245/40R18')",
+  "wheelSize": number (inches),
+  "wheelMaterial": "material type (e.g., 'Alloy', 'Steel')",
+  "batteryCapacity": number (kWh, for electric/hybrid only),
+  "electricRange": number (miles EPA combined, for electric/hybrid only),
   "zeroToSixty": number (seconds),
   "topSpeed": number (mph),
   "bodyType": "body type"

@@ -166,18 +166,11 @@ export function CarSearchForm({ onSearch, className }: CarSearchFormProps) {
                 {trims.map((t, index) => (
                   <option key={t.trimId || `${t.trimName}-${index}`} value={t.trimName}>
                     {t.displayName || t.trimName}
-                    {t.dataSource === 'ai-generated' ? ' [AI]' : ''}
                   </option>
                 ))}
               </select>
               {make && model && year && trims.length === 0 && loading && (
                 <p className="text-sm text-gray-500 mt-1">Loading trims...</p>
-              )}
-              {trims.length > 0 && trims[0]?.dataSource === 'ai-generated' && (
-                <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>AI-generated trim options - verify specifications</span>
-                </p>
               )}
               {trims.length === 0 && !loading && (
                 <p className="text-sm text-gray-500 mt-1">

@@ -36,14 +36,20 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
     specs.fuelType || 
     specs.mpgCity || 
     specs.mpgHighway || 
-    specs.fuelCapacity
+    specs.fuelCapacity ||
+    specs.batteryCapacity ||
+    specs.electricRange
   )
 
   const hasDimensionData = !!(
     specs.length || 
     specs.width || 
     specs.height || 
-    specs.curbWeight
+    specs.curbWeight ||
+    specs.cargoVolume ||
+    specs.trunkCapacity ||
+    specs.tireSize ||
+    specs.wheelSize
   )
 
   return (
@@ -60,8 +66,8 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
                 <p className="text-lg text-gray-600 mt-1">{specs.trim}</p>
               )}
             </div>
-            <Badge variant={specs.dataSource === 'verified' ? 'default' : 'secondary'}>
-              {specs.dataSource === 'verified' ? '✓ Verified' : '⚡ AI-Generated'}
+            <Badge variant="default">
+              ✓ Data
             </Badge>
           </div>
           {specs.bodyType && (
@@ -126,6 +132,12 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
                 <SpecRow label="MPG Highway" value={specs.mpgHighway ? `${specs.mpgHighway} mpg` : undefined} />
                 <SpecRow label="MPG Combined" value={specs.mpgCombined ? `${specs.mpgCombined} mpg` : undefined} />
                 <SpecRow label="Fuel Capacity" value={specs.fuelCapacity ? `${specs.fuelCapacity} L` : undefined} />
+                {specs.batteryCapacity && (
+                  <SpecRow label="Battery Capacity" value={`${specs.batteryCapacity} kWh`} />
+                )}
+                {specs.electricRange && (
+                  <SpecRow label="Electric Range" value={`${specs.electricRange} mi`} />
+                )}
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
@@ -143,6 +155,11 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
                 <SpecRow label="Height" value={specs.height ? `${specs.height} mm` : undefined} />
                 <SpecRow label="Wheelbase" value={specs.wheelbase ? `${specs.wheelbase} mm` : undefined} />
                 <SpecRow label="Curb Weight" value={specs.curbWeight ? `${specs.curbWeight} kg` : undefined} />
+                <SpecRow label="Cargo Volume" value={specs.cargoVolume ? `${specs.cargoVolume} L` : undefined} />
+                <SpecRow label="Trunk Capacity" value={specs.trunkCapacity ? `${specs.trunkCapacity} L` : undefined} />
+                <SpecRow label="Tire Size" value={specs.tireSize} />
+                <SpecRow label="Wheel Size" value={specs.wheelSize ? `${specs.wheelSize}"` : undefined} />
+                <SpecRow label="Wheel Material" value={specs.wheelMaterial} />
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
@@ -151,16 +168,6 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
             )}
           </TabsContent>
         </Tabs>
-
-        {/* Data Source Note */}
-        {specs.dataSource === 'ai-generated' && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> This data was generated using AI and may contain minor inaccuracies. 
-              We recommend verifying critical specifications with the manufacturer.
-            </p>
-          </div>
-        )}
       </div>
     </Card>
   )

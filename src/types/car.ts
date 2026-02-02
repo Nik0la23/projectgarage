@@ -36,6 +36,19 @@ export interface CarSpecs {
   wheelbase?: number
   curbWeight?: number
   
+  // Cargo & Storage
+  cargoVolume?: number  // Liters or cubic feet
+  trunkCapacity?: number  // Liters
+  
+  // Tires & Wheels
+  tireSize?: string  // e.g., "245/40R18"
+  wheelSize?: number  // Inches (diameter)
+  wheelMaterial?: string  // e.g., "Alloy", "Steel"
+  
+  // Electric Vehicle Specs
+  batteryCapacity?: number  // kWh
+  electricRange?: number  // Miles (EPA combined range)
+  
   // Performance
   zeroToSixty?: number
   topSpeed?: number
