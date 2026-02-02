@@ -55,7 +55,7 @@ export interface CarSpecs {
   
   // Metadata
   dataSource: 'verified' | 'ai-generated'
-  sourceApi?: 'nhtsa' | 'carquery' | 'claude'
+  sourceApi?: 'nhtsa' | 'carquery' | 'groq'
 }
 
 export interface YearOption {
