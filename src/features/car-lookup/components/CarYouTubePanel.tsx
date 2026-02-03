@@ -17,7 +17,7 @@ export function CarYouTubePanel({ car, className }: CarYouTubePanelProps) {
     make: car?.make || null,
     model: car?.model || null,
     year: car?.year || null,
-    maxResults: 6,
+    maxResults: 5,
   })
 
   // Don't show if no car selected
@@ -169,7 +169,7 @@ export function CarYouTubePanel({ car, className }: CarYouTubePanelProps) {
         {videos.length > 0 && (
           <div className="mt-6 text-xs text-gray-500 border-t pt-4">
             <p>
-              Videos are fetched from YouTube and sorted by view count. 
+              Videos are fetched from YouTube and sorted by relevance. 
               We are not affiliated with the content creators.
             </p>
           </div>
