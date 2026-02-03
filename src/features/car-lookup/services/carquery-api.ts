@@ -23,22 +23,32 @@ export async function fetchCarQueryTrims(
     url.searchParams.set('model', model.toLowerCase())
     url.searchParams.set('year', year.toString())
     
+    console.log(`[CarQuery] Fetching trims: ${url.toString()}`)
+    
     const response = await fetch(url.toString(), {
       next: { revalidate: 86400 }, // Cache for 24 hours (static data)
     })
     
+    console.log(`[CarQuery] Response status: ${response.status}`)
+    
     if (!response.ok) {
+      console.error(`[CarQuery] API error: ${response.status} ${response.statusText}`)
       throw new Error(`CarQuery API error: ${response.status}`)
     }
     
     const text = await response.text()
+    console.log(`[CarQuery] Response text length: ${text.length} chars`)
+    
     // Remove JSONP wrapper if present
     const jsonText = text.replace(/^\?\(/, '').replace(/\);?$/, '')
     const data: CarQueryResponse<CarQueryTrim> = JSON.parse(jsonText)
     
+    const trimsCount = data.Trims?.length || 0
+    console.log(`[CarQuery] Found ${trimsCount} trims`)
+    
     return data.Trims || []
   } catch (error) {
-    console.error('Error fetching trims from CarQuery:', error)
+    console.error('[CarQuery] Error fetching trims:', error)
     return []
   }
 }

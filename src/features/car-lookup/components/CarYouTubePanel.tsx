@@ -17,7 +17,7 @@ export function CarYouTubePanel({ car, className }: CarYouTubePanelProps) {
     make: car?.make || null,
     model: car?.model || null,
     year: car?.year || null,
-    maxResults: 5,
+    maxResults: 6,
   })
 
   // Don't show if no car selected

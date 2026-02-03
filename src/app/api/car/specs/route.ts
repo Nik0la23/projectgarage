@@ -44,7 +44,9 @@ export async function GET(request: NextRequest) {
     
     // Step 2: Try CarQuery API for detailed specs (if supported year range)
     if (isCarQuerySupported(yearNum)) {
+      console.log(`[Specs] Trying CarQuery for ${yearNum} ${make} ${model}`)
       const trims = await fetchCarQueryTrims(make, model, yearNum)
+      console.log(`[Specs] CarQuery returned ${trims.length} trims`)
       
       if (trims.length > 0) {
         // If trim is specified, find it; otherwise use first trim
@@ -58,22 +60,27 @@ export async function GET(request: NextRequest) {
         }
         
         const specs = mapCarQueryToSpecs(selectedTrim)
+        console.log(`[Specs] Returning CarQuery specs for ${specs.make} ${specs.model}`)
         
         return NextResponse.json(specs, {
           headers: {
             'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=43200',
           },
         })
+      } else {
+        console.log(`[Specs] CarQuery returned no trims, falling back to AI`)
       }
     }
     
     // Step 3: Fall back to AI-generated specs
     try {
+      console.log(`[Specs] Generating AI specs for ${yearNum} ${make} ${model}`)
       const aiSpecs = await generateAISpecs({
         make,
         model,
         year: yearNum,
       })
+      console.log(`[Specs] AI generation successful`)
       
       return NextResponse.json(aiSpecs, {
         headers: {
@@ -81,9 +88,10 @@ export async function GET(request: NextRequest) {
         },
       })
     } catch (aiError) {
-      console.error('AI generation failed:', aiError)
+      console.error('[Specs] AI generation failed:', aiError)
       
       // Return basic specs as last resort
+      console.log(`[Specs] Using fallback specs`)
       const fallbackSpecs = getFallbackSpecs({
         make,
         model,
