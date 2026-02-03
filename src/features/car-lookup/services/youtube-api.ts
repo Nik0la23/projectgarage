@@ -1,5 +1,5 @@
 // YouTube Data API v3 integration
-// Fetches car review videos sorted by view count
+// Fetches car review videos sorted by relevance
 
 export interface YouTubeVideo {
   videoId: string
@@ -87,7 +87,7 @@ export async function searchCarVideos(
     searchUrl.searchParams.set('q', query)
     searchUrl.searchParams.set('type', 'video')
     searchUrl.searchParams.set('maxResults', maxResults.toString())
-    searchUrl.searchParams.set('order', 'viewCount') // Sort by most viewed
+    searchUrl.searchParams.set('order', 'relevance') // Sort by most relevant
     searchUrl.searchParams.set('videoDuration', 'medium') // 4-20 minutes (avoid shorts and very long videos)
     searchUrl.searchParams.set('relevanceLanguage', 'en')
     searchUrl.searchParams.set('safeSearch', 'none')
