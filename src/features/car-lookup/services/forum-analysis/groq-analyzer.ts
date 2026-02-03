@@ -43,15 +43,17 @@ export async function analyzeCarReliability(
   }
 
   // Build prompts
-  const systemPrompt = `You are an expert automotive analyst specializing in car reliability and owner satisfaction.
+  const systemPrompt = `You are an expert automotive analyst specializing in car reliability, features, and owner satisfaction.
 
-Your task is to analyze discussions from car owners and automotive experts to provide accurate, data-driven insights.
+Your task is to analyze discussions from car owners and automotive experts to provide accurate, data-driven insights about both reliability AND what makes this car special.
 
 Key principles:
 - Always cite specific sources when mentioning problems or praise
 - Distinguish between owner opinions and expert reviews
 - Be specific about issues (not vague like "some reliability problems")
 - Base reliability score on sentiment, frequency of issues, and severity
+- Highlight standout features, technology, and design elements that make the car appealing
+- Include both practical reliability aspects AND exciting features/technology
 - If data is limited, acknowledge this in your verdict
 
 Return ONLY valid JSON, no other text.`
@@ -60,7 +62,7 @@ Return ONLY valid JSON, no other text.`
 
 ${formattedSources}
 
-Provide a comprehensive reliability analysis in JSON format:
+Provide a comprehensive analysis covering BOTH reliability AND standout features in JSON format:
 
 {
   "commonProblems": [
@@ -69,9 +71,17 @@ Provide a comprehensive reliability analysis in JSON format:
   "reliabilityScore": 1-10 (integer, where 1=very unreliable, 10=very reliable),
   "whatOwnersLove": ["specific positive point 1", "specific positive point 2"],
   "whatOwnersHate": ["specific negative point 1", "specific negative point 2"],
+  "standoutFeatures": ["cool feature/tech 1", "cool feature/tech 2", "cool feature/tech 3"],
   "expertVsOwner": "brief comparison of expert opinions vs owner experiences",
   "overallVerdict": "2-3 sentence summary of whether this car is worth buying and why"
 }
+
+IMPORTANT for standoutFeatures:
+- Include technology features (infotainment, safety tech, driver aids)
+- Include design highlights (interior quality, exterior styling)
+- Include performance characteristics (handling, power, efficiency)
+- Include comfort and convenience features (seats, space, amenities)
+- Be specific (e.g., "Adaptive cruise control with lane centering" not just "good tech")
 
 Be specific and actionable. If no significant problems found, say so.`
 
@@ -130,6 +140,7 @@ Be specific and actionable. If no significant problems found, say so.`
       commonProblems: analysisData.commonProblems || [],
       whatOwnersLove: analysisData.whatOwnersLove || [],
       whatOwnersHate: analysisData.whatOwnersHate || [],
+      standoutFeatures: analysisData.standoutFeatures || [],
       reliabilityScore: analysisData.reliabilityScore || 5,
       expertVsOwner: analysisData.expertVsOwner || 'No comparison available',
       overallVerdict: analysisData.overallVerdict || 'Insufficient data for verdict',

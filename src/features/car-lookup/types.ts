@@ -43,6 +43,7 @@ export interface CarAnalysisResult {
   commonProblems: Array<{ issue: string; sources: string[] }>
   whatOwnersLove: string[]
   whatOwnersHate: string[]
+  standoutFeatures: string[]  // Cool features, technology, design highlights
   reliabilityScore: number  // 1-10
   expertVsOwner: string     // Comparison text
   overallVerdict: string
@@ -71,4 +72,23 @@ export interface CachedAnalysis {
   data: CarAnalysisResult
   timestamp: number
   cacheKey: string
+}
+
+// YouTube Video Types
+
+export interface YouTubeVideo {
+  videoId: string
+  title: string
+  description: string
+  thumbnail: string
+  channelTitle: string
+  publishedAt: string
+  viewCount?: number
+  likeCount?: number
+  duration?: string
+}
+
+export interface YouTubeSearchResult {
+  videos: YouTubeVideo[]
+  totalResults: number
 }

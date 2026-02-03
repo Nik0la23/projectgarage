@@ -3,7 +3,7 @@
 // Main landing page with car search and specs display
 
 import { useState } from 'react'
-import { CarSearchForm, CarSpecsPanel, CarReliabilityPanel } from '@/features/car-lookup'
+import { CarSearchForm, CarSpecsPanel, CarReliabilityPanel, CarYouTubePanel } from '@/features/car-lookup'
 import { useCarData } from '@/features/car-lookup/hooks/use-car-data'
 import { useSearchHistory } from '@/features/car-lookup/hooks/use-search-history'
 import type { Car } from '@/types'
@@ -49,6 +49,7 @@ export default function HomePage() {
           <div className="lg:col-span-2 space-y-6">
             <CarSpecsPanel specs={specs} />
             <CarReliabilityPanel car={selectedCar} />
+            <CarYouTubePanel car={selectedCar} />
           </div>
         </div>
 

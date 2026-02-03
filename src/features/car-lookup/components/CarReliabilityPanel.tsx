@@ -205,6 +205,24 @@ export function CarReliabilityPanel({ car, className }: CarReliabilityPanelProps
                   </div>
                 )}
 
+                {/* Standout Features */}
+                {data.standoutFeatures && data.standoutFeatures.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                      <span>⭐</span>
+                      Standout Features & Technology
+                    </h4>
+                    <ul className="space-y-1">
+                      {data.standoutFeatures.map((item, index) => (
+                        <li key={index} className="text-blue-800 flex items-start gap-2">
+                          <span className="text-blue-600 mt-0.5">✦</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* What Owners Hate */}
                 {data.whatOwnersHate.length > 0 && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
