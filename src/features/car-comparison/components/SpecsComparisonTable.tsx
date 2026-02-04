@@ -49,7 +49,7 @@ export function SpecsComparisonTable({ cars, specs, className }: SpecsComparison
 
     // Find the best value
     let bestIndex = -1
-    let bestValue = null
+    let bestValue: number | null = null
 
     values.forEach((value, index) => {
       if (value === null) return
