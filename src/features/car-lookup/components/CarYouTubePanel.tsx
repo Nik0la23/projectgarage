@@ -63,7 +63,7 @@ export function CarYouTubePanel({ car, className }: CarYouTubePanelProps) {
         {/* Videos Grid */}
         {!loading && !error && videos.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {videos.map((video) => (
+            {videos.slice(0, 6).map((video) => (
               <a
                 key={video.videoId}
                 href={`https://www.youtube.com/watch?v=${video.videoId}`}

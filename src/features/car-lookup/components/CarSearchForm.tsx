@@ -11,10 +11,11 @@ import type { Car } from '@/types'
 
 interface CarSearchFormProps {
   onSearch: (car: Car) => void
+  onReset?: () => void
   className?: string
 }
 
-export function CarSearchForm({ onSearch, className }: CarSearchFormProps) {
+export function CarSearchForm({ onSearch, onReset, className }: CarSearchFormProps) {
   const [make, setMake] = useState<string | null>(null)
   const [year, setYear] = useState<number | null>(null)
   const [model, setModel] = useState<string | null>(null)
@@ -65,6 +66,8 @@ export function CarSearchForm({ onSearch, className }: CarSearchFormProps) {
     setModel(null)
     setYear(null)
     setTrim(null)
+    // Clear parent state (specs, reliability, videos)
+    onReset?.()
   }
 
   return (

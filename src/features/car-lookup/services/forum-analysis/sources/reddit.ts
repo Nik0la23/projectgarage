@@ -46,7 +46,7 @@ export async function fetchRedditDiscussions(
     try {
       // Use rate limiter queue
       const posts = await redditQueue.add(async () => {
-        return await fetchFromSubreddit(subreddit, searchQuery)
+        return await fetchFromSubreddit(subreddit, searchQuery, make, model)
       })
 
       if (posts && posts.length > 0) {
@@ -78,7 +78,9 @@ export async function fetchRedditDiscussions(
 // Fetch posts from a specific subreddit
 async function fetchFromSubreddit(
   subreddit: string,
-  query: string
+  query: string,
+  make: string,
+  model: string
 ): Promise<ForumSource[]> {
   const url = new URL(`https://www.reddit.com/r/${subreddit}/search.json`)
   
@@ -142,6 +144,18 @@ async function fetchFromSubreddit(
 
     // Filter out deleted/removed posts
     if (selftext === '[deleted]' || selftext === '[removed]') {
+      continue
+    }
+
+    // IMPORTANT: Verify the post actually mentions the specific car
+    // Combine title and body for checking
+    const combinedText = `${title} ${selftext}`.toLowerCase()
+    const makePattern = make.toLowerCase()
+    const modelPattern = model.toLowerCase()
+    
+    // Must contain both make AND model (not just make)
+    if (!combinedText.includes(makePattern) || !combinedText.includes(modelPattern)) {
+      console.log(`[Reddit] Filtered out: "${title}" (doesn't contain ${make} ${model})`)
       continue
     }
 

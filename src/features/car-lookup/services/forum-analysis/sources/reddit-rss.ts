@@ -28,7 +28,7 @@ export async function fetchRedditDiscussionsRSS(
   for (const subreddit of CAR_SUBREDDITS) {
     try {
       const posts = await redditQueue.add(async () => {
-        return await fetchFromSubredditRSS(subreddit, searchQuery)
+        return await fetchFromSubredditRSS(subreddit, searchQuery, make, model)
       })
 
       if (posts && posts.length > 0) {
@@ -55,7 +55,9 @@ export async function fetchRedditDiscussionsRSS(
 
 async function fetchFromSubredditRSS(
   subreddit: string,
-  query: string
+  query: string,
+  make: string,
+  model: string
 ): Promise<ForumSource[]> {
   // Use RSS search feed
   const searchTerm = encodeURIComponent(query)
@@ -90,11 +92,11 @@ async function fetchFromSubredditRSS(
   }
 
   const xml = await response.text()
-  return parseRedditRSS(xml)
+  return parseRedditRSS(xml, make, model)
 }
 
 // Simple RSS XML parser (no external dependencies)
-function parseRedditRSS(xml: string): ForumSource[] {
+function parseRedditRSS(xml: string, make: string, model: string): ForumSource[] {
   const posts: ForumSource[] = []
 
   // Extract entries using regex (simple parser, good enough for our needs)
@@ -121,6 +123,17 @@ function parseRedditRSS(xml: string): ForumSource[] {
 
       // Filter out short posts (low quality)
       if (body.length < 100) {
+        continue
+      }
+
+      // IMPORTANT: Verify the post actually mentions the specific car
+      const combinedText = `${title} ${body}`.toLowerCase()
+      const makePattern = make.toLowerCase()
+      const modelPattern = model.toLowerCase()
+      
+      // Must contain both make AND model (not just make)
+      if (!combinedText.includes(makePattern) || !combinedText.includes(modelPattern)) {
+        console.log(`[Reddit-RSS] Filtered out: "${title}" (doesn't contain ${make} ${model})`)
         continue
       }
 
