@@ -36,6 +36,9 @@ export interface CarSpecs {
   wheelbase?: number
   curbWeight?: number
   
+  // Passenger capacity
+  seats?: number
+
   // Cargo & Storage
   cargoVolume?: number  // Liters or cubic feet
   trunkCapacity?: number  // Liters

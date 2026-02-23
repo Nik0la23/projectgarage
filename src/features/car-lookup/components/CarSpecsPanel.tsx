@@ -5,6 +5,7 @@
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { MatchIndicator } from '@/features/car-finder'
 import type { CarSpecs } from '@/types'
 
 interface CarSpecsPanelProps {
@@ -65,6 +66,9 @@ export function CarSpecsPanel({ specs, className }: CarSpecsPanelProps) {
               {specs.trim && (
                 <p className="text-lg text-gray-600 mt-1">{specs.trim}</p>
               )}
+              <div className="mt-2">
+                <MatchIndicator specs={specs} />
+              </div>
             </div>
             <Badge variant="default">
               ✓ Data

@@ -6,7 +6,7 @@ import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { GitCompare } from 'lucide-react'
+import { GitCompare, Sparkles } from 'lucide-react'
 import { CarSearchForm, CarSpecsPanel, CarReliabilityPanel, CarYouTubePanel } from '@/features/car-lookup'
 import { useCarData } from '@/features/car-lookup/hooks/use-car-data'
 import { useSearchHistory } from '@/features/car-lookup/hooks/use-search-history'
@@ -70,12 +70,20 @@ function HomePageContent() {
                 Your intelligent car buying assistant
               </p>
             </div>
-            <Link href="/compare">
-              <Button variant="outline">
-                <GitCompare className="mr-2 h-4 w-4" />
-                Compare Cars
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/car-finder">
+                <Button variant="outline">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Car Finder
+                </Button>
+              </Link>
+              <Link href="/compare">
+                <Button variant="outline">
+                  <GitCompare className="mr-2 h-4 w-4" />
+                  Compare Cars
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>

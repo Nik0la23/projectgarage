@@ -1,12 +1,14 @@
 // localStorage utilities for search history and cached data
 
 import type { Car } from '@/types'
+import type { CarFinderPreferences } from '@/features/car-finder/types'
 
 const STORAGE_KEYS = {
   SEARCH_HISTORY: 'projectgarage_search_history',
   RECENT_CARS: 'projectgarage_recent_cars',
   COMPARISON_HISTORY: 'projectgarage_comparison_history',
   SIDEBAR_OPEN: 'projectgarage_sidebar_open',
+  FINDER_PREFERENCES: 'projectgarage_finder_preferences',
 } as const
 
 const MAX_HISTORY_ITEMS = 10
@@ -140,19 +142,34 @@ export function getRecentCars(): Car[] {
 
 export function addRecentCar(car: Car): void {
   const recent = getRecentCars()
-  
+
   // Remove if exists
   const filtered = recent.filter(
-    item => !(item.year === car.year && 
-              item.make === car.make && 
+    item => !(item.year === car.year &&
+              item.make === car.make &&
               item.model === car.model)
   )
-  
+
   // Add to front
   filtered.unshift(car)
-  
+
   // Keep only last 5
   const trimmed = filtered.slice(0, 5)
-  
+
   setItem(STORAGE_KEYS.RECENT_CARS, trimmed)
+}
+
+// Car Finder preferences (used to power match indicators across the app)
+
+export function getFinderPreferences(): CarFinderPreferences | null {
+  return getItem<CarFinderPreferences>(STORAGE_KEYS.FINDER_PREFERENCES)
+}
+
+export function saveFinderPreferences(prefs: CarFinderPreferences): void {
+  setItem(STORAGE_KEYS.FINDER_PREFERENCES, prefs)
+}
+
+export function clearFinderPreferences(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(STORAGE_KEYS.FINDER_PREFERENCES)
 }

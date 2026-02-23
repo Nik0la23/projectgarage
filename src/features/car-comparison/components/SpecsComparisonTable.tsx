@@ -4,6 +4,7 @@
 
 import { Card } from '@/components/ui/card'
 import { Check } from 'lucide-react'
+import { MatchIndicator } from '@/features/car-finder'
 import type { ComparisonCar, ComparisonCategory } from '../types'
 import type { CarSpecs } from '@/types/car'
 
@@ -105,6 +106,11 @@ export function SpecsComparisonTable({ cars, specs, className }: SpecsComparison
                       <div className="text-sm">{car.model}</div>
                       {car.trim && (
                         <div className="text-xs text-gray-600 font-normal">{car.trim}</div>
+                      )}
+                      {specs[index] && (
+                        <div className="mt-1.5">
+                          <MatchIndicator specs={specs[index]!} />
+                        </div>
                       )}
                     </div>
                   </th>

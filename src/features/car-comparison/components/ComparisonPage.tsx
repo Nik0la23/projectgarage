@@ -3,8 +3,10 @@
 // Main Comparison Page - Orchestrates the entire comparison feature
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Sparkles } from 'lucide-react'
 import { useComparison } from '../hooks/use-comparison'
 import { useComparisonHistory } from '@/features/history-sidebar'
 import { CarSelector } from './CarSelector'
@@ -78,9 +80,17 @@ export function ComparisonPage() {
                 Select 2-3 cars to compare side-by-side with AI-powered insights
               </p>
             </div>
-            <a href="/" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-              ← Back to Search
-            </a>
+            <div className="flex items-center gap-3">
+              <Link href="/car-finder">
+                <Button variant="outline" size="sm">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Car Finder
+                </Button>
+              </Link>
+              <a href="/" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                ← Back to Search
+              </a>
+            </div>
           </div>
         </div>
       </header>
