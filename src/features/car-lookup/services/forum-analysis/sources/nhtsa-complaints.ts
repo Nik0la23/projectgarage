@@ -38,7 +38,7 @@ interface NHTSAComplaintsResponse {
 
 interface NHTSARecallsResponse {
   Count: number
-  Results: NHTSARecall[]
+  results: NHTSARecall[]  // api.nhtsa.gov returns lowercase 'results', uppercase 'Count'
 }
 
 export interface NHTSAData {
@@ -47,21 +47,34 @@ export interface NHTSAData {
   summary: string
 }
 
+// NHTSA api.nhtsa.gov requires title-case make/model (e.g. "Audi", not "AUDI")
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 // Fetch NHTSA complaints and recalls for a vehicle
 export async function fetchNHTSAComplaints(
   make: string,
   model: string,
   year: number
 ): Promise<NHTSAData> {
-  console.log(`[NHTSA] Fetching complaints & recalls for ${year} ${make} ${model}`)
+  // Normalise case — api.nhtsa.gov returns 400 for all-uppercase makes like "AUDI"
+  const normMake = toTitleCase(make)
+  const normModel = toTitleCase(model)
+
+  console.log(`[NHTSA] Fetching complaints & recalls for ${year} ${normMake} ${normModel}`)
 
   const [complaintsResult, recallsResult] = await Promise.allSettled([
-    fetchComplaints(make, model, year),
-    fetchRecalls(make, model, year),
+    fetchComplaints(normMake, normModel, year),
+    fetchRecalls(normMake, normModel, year),
   ])
 
   const complaints = complaintsResult.status === 'fulfilled' ? complaintsResult.value : { count: 0, results: [] }
-  const recalls = recallsResult.status === 'fulfilled' ? recallsResult.value : { Count: 0, Results: [] }
+  const recalls = recallsResult.status === 'fulfilled' ? recallsResult.value : { Count: 0, results: [] }
 
   if (complaintsResult.status === 'rejected') {
     console.warn('[NHTSA] Complaints fetch failed:', complaintsResult.reason)
@@ -70,7 +83,8 @@ export async function fetchNHTSAComplaints(
     console.warn('[NHTSA] Recalls fetch failed:', recallsResult.reason)
   }
 
-  console.log(`[NHTSA] ${complaints.count} complaints, ${recalls.Count} recalls`)
+  const recallCount = recalls.Count ?? 0
+  console.log(`[NHTSA] ${complaints.count} complaints, ${recallCount} recalls`)
 
   const sources = buildSources(complaints, recalls, make, model, year)
   const summary = buildSummary(complaints, recalls, make, model, year)
@@ -172,7 +186,7 @@ function buildSources(
   }
 
   // Add all recalls (these are official safety campaigns — always include)
-  for (const recall of recalls.Results) {
+  for (const recall of (recalls.results ?? [])) {
     const body = [
       recall.Summary,
       recall.Consequence ? `Consequence: ${recall.Consequence}` : '',
@@ -197,14 +211,16 @@ function buildSummary(
   model: string,
   year: number
 ): string {
-  if (complaints.count === 0 && recalls.Count === 0) {
+  const recallCount = recalls.Count ?? 0
+
+  if (complaints.count === 0 && recallCount === 0) {
     return `=== NHTSA OFFICIAL DATA (${year} ${make} ${model}) ===\nNo complaints or recalls on record.\n`
   }
 
   const lines: string[] = [
     `=== NHTSA OFFICIAL DATA (${year} ${make} ${model}) ===`,
     `Total complaints on government record: ${complaints.count}`,
-    `Total safety recalls: ${recalls.Count}`,
+    `Total safety recalls: ${recallCount}`,
     '',
     '⚠️ IMPORTANT CONTEXT FOR RELIABILITY SCORING:',
     `These ${complaints.count} complaints represent owner-reported issues filed with the US government.`,
@@ -228,9 +244,9 @@ function buildSummary(
   }
 
   // Recalls summary
-  if (recalls.Count > 0) {
-    lines.push(`Safety Recalls (${recalls.Count} total — these are mandatory safety campaigns):`)
-    for (const recall of recalls.Results) {
+  if (recallCount > 0) {
+    lines.push(`Safety Recalls (${recallCount} total — these are mandatory safety campaigns):`)
+    for (const recall of (recalls.results ?? [])) {
       lines.push(`  • [${recall.NHTSACampaignNumber}] ${recall.Component}: ${recall.Summary?.slice(0, 150) ?? 'No summary'}`)
     }
     lines.push('')

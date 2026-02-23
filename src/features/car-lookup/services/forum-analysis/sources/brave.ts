@@ -52,33 +52,35 @@ export async function fetchBraveArticles(
 
   console.log(`[Brave] Running 2 targeted queries for ${year} ${makeName} ${modelName}`)
 
-  try {
-    // Run both queries sequentially (rate limiter: 1 req/sec)
-    const authorityArticles = await braveQueue.add(async () => {
-      return await performBraveSearch(authorityQuery, apiKey, 5)
-    })
+  // Run both queries sequentially — each fails independently so a 429 on query 2
+  // doesn't discard results already returned by query 1
+  const authorityArticles = await braveQueue.add(async () => {
+    return await performBraveSearch(authorityQuery, apiKey, 5)
+  }).catch((err) => {
+    console.warn('[Brave] Authority query failed:', err instanceof Error ? err.message : err)
+    return [] as ForumSource[]
+  })
 
-    const reliabilityArticles = await braveQueue.add(async () => {
-      return await performBraveSearch(reliabilityQuery, apiKey, 5)
-    })
+  const reliabilityArticles = await braveQueue.add(async () => {
+    return await performBraveSearch(reliabilityQuery, apiKey, 5)
+  }).catch((err) => {
+    console.warn('[Brave] Reliability query failed:', err instanceof Error ? err.message : err)
+    return [] as ForumSource[]
+  })
 
-    // Merge and deduplicate by URL
-    const seen = new Set<string>()
-    const merged: ForumSource[] = []
+  // Merge and deduplicate by URL
+  const seen = new Set<string>()
+  const merged: ForumSource[] = []
 
-    for (const article of [...(authorityArticles ?? []), ...(reliabilityArticles ?? [])]) {
-      if (!seen.has(article.url)) {
-        seen.add(article.url)
-        merged.push(article)
-      }
+  for (const article of [...authorityArticles, ...reliabilityArticles]) {
+    if (!seen.has(article.url)) {
+      seen.add(article.url)
+      merged.push(article)
     }
-
-    console.log(`[Brave] Found ${merged.length} unique articles for ${year} ${makeName} ${modelName} (authority: ${authorityArticles?.length ?? 0}, reliability: ${reliabilityArticles?.length ?? 0})`)
-    return merged
-  } catch (error) {
-    console.error('[Brave] Search failed:', error instanceof Error ? error.message : 'Unknown error')
-    return []
   }
+
+  console.log(`[Brave] Found ${merged.length} unique articles for ${year} ${makeName} ${modelName} (authority: ${authorityArticles.length}, reliability: ${reliabilityArticles.length})`)
+  return merged
 }
 
 // Perform the actual Brave Search API call
