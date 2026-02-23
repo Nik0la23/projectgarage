@@ -34,8 +34,8 @@ export async function fetchBraveArticles(
   // Query 1: target authoritative automotive review sites directly
   const authorityQuery = `"${year} ${make} ${model}" site:caranddriver.com OR site:motortrend.com OR site:cars.com OR site:kbb.com OR site:edmunds.com`
 
-  // Query 2: general reliability & owner experience search
-  const reliabilityQuery = `${year} ${make} ${model} reliability owner problems long-term -site:reddit.com`
+  // Query 2: reliability & owner experience — Reddit allowed so Brave surfaces the best threads
+  const reliabilityQuery = `${year} ${make} ${model} reliability owner experience problems`
 
   console.log(`[Brave] Running 2 targeted queries for ${year} ${make} ${model}`)
 

@@ -1,12 +1,11 @@
 // Main orchestrator for forum/article analysis
 // Coordinates all data sources, caching, and AI analysis
 
-import { fetchRedditDiscussionsRSS } from './sources/reddit-rss'
 import { fetchBraveArticles } from './sources/brave'
 import { fetchNHTSAComplaints } from './sources/nhtsa-complaints'
 import { analyzeCarReliability as runGroqAnalysis } from './groq-analyzer'
 import { getCachedAnalysis, saveCachedAnalysis } from './cache-manager'
-import type { CarAnalysisResult, ForumSource } from '@/features/car-lookup/types'
+import type { CarAnalysisResult } from '@/features/car-lookup/types'
 
 // Main function to analyze car reliability
 export async function analyzeCarReliability(
@@ -31,7 +30,6 @@ export async function analyzeCarReliability(
   const startTime = Date.now()
 
   const results = await Promise.allSettled([
-    fetchRedditDiscussionsRSS(make, model, year),
     fetchBraveArticles(make, model, year),
     fetchNHTSAComplaints(make, model, year),
   ])
@@ -40,30 +38,26 @@ export async function analyzeCarReliability(
   console.log(`[Orchestrator] Data fetching completed in ${fetchDuration}ms`)
 
   // STEP 3: Extract successful results or use empty arrays for failures
-  const redditPosts: ForumSource[] =
+  const webArticles =
     results[0].status === 'fulfilled' ? results[0].value : []
 
-  const webArticles: ForumSource[] =
-    results[1].status === 'fulfilled' ? results[1].value : []
-
   const nhtsaData =
-    results[2].status === 'fulfilled'
-      ? results[2].value
+    results[1].status === 'fulfilled'
+      ? results[1].value
       : { sources: [], summary: '' }
 
-  // Log any failures with detailed information
+  // Log any failures
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
-      const sourceName = ['Reddit', 'Brave', 'NHTSA'][index]
+      const sourceName = ['Brave', 'NHTSA'][index]
       console.error(`[Orchestrator] ${sourceName} failed:`, result.reason)
     }
   })
 
   // Calculate total sources
-  const totalSources = redditPosts.length + webArticles.length + nhtsaData.sources.length
+  const totalSources = webArticles.length + nhtsaData.sources.length
 
   console.log('[Orchestrator] Source counts:', {
-    reddit: redditPosts.length,
     brave: webArticles.length,
     nhtsaComplaints: nhtsaData.sources.length,
     total: totalSources,
@@ -86,7 +80,6 @@ export async function analyzeCarReliability(
     make,
     model,
     year,
-    redditPosts,
     webArticles,
     nhtsaComplaints: nhtsaData.sources,
     nhtsaSummary: nhtsaData.summary,

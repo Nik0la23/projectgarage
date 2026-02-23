@@ -15,8 +15,7 @@ interface AnalysisInput {
   make: string
   model: string
   year: number
-  redditPosts: ForumSource[]
-  webArticles: ForumSource[]
+  webArticles: ForumSource[]  // Brave results: authority sites + Reddit + general web
   nhtsaComplaints: ForumSource[]
   nhtsaSummary: string  // Pre-built statistical summary from NHTSA source
 }
@@ -25,7 +24,7 @@ interface AnalysisInput {
 export async function analyzeCarReliability(
   input: AnalysisInput
 ): Promise<CarAnalysisResult> {
-  const { make, model, year, redditPosts, webArticles, nhtsaComplaints, nhtsaSummary } = input
+  const { make, model, year, webArticles, nhtsaComplaints, nhtsaSummary } = input
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
@@ -33,7 +32,7 @@ export async function analyzeCarReliability(
   }
 
   // Format all sources into a single prompt block
-  const formattedSources = formatSourcesForAI(redditPosts, webArticles, nhtsaComplaints, nhtsaSummary)
+  const formattedSources = formatSourcesForAI(webArticles, nhtsaComplaints, nhtsaSummary)
 
   // Check estimated token count (rough estimate: chars / 4)
   const estimatedTokens = formattedSources.length / 4
@@ -152,14 +151,14 @@ Rules for reliabilityScore:
       expertVsOwner: analysisData.expertVsOwner || 'No comparison available',
       overallVerdict: analysisData.overallVerdict || 'Insufficient data for verdict',
       sourceCounts: {
-        reddit: redditPosts.length,
+        reddit: 0,
         edmunds: 0,
         webArticles: webArticles.length,
         nhtsaComplaints: nhtsaComplaints.length,
-        total: redditPosts.length + webArticles.length + nhtsaComplaints.length,
+        total: webArticles.length + nhtsaComplaints.length,
       },
       rawSources: {
-        reddit: redditPosts,
+        reddit: [],
         edmunds: [],
         webArticles: webArticles,
         nhtsa: nhtsaComplaints,
@@ -180,7 +179,6 @@ Rules for reliabilityScore:
 
 // Format all sources into a readable block for the AI prompt
 function formatSourcesForAI(
-  redditPosts: ForumSource[],
   webArticles: ForumSource[],
   nhtsaComplaints: ForumSource[],
   nhtsaSummary: string
@@ -205,28 +203,16 @@ function formatSourcesForAI(
     })
   }
 
-  // Web articles from authoritative automotive sources
+  // Web articles — mix of authority reviews (Car and Driver, Motor Trend, KBB, etc.)
+  // and the most relevant Reddit/forum posts as ranked by Brave Search
   if (webArticles.length > 0) {
-    sections.push(`\n=== WEB ARTICLES FROM AUTOMOTIVE SOURCES (${webArticles.length} articles) ===\n`)
+    sections.push(`\n=== WEB SOURCES (${webArticles.length} results — reviews, owner forums, articles) ===\n`)
     webArticles.forEach((article, index) => {
       sections.push(
-        `[Article ${index + 1}]\n` +
+        `[Source ${index + 1}]\n` +
         `Title: ${article.title}\n` +
-        `Snippet: ${truncateText(article.body, 350)}\n` +
-        `Source: ${article.url}\n` +
-        `---\n`
-      )
-    })
-  }
-
-  // Reddit owner discussions
-  if (redditPosts.length > 0) {
-    sections.push(`\n=== REDDIT OWNER DISCUSSIONS (${redditPosts.length} posts) ===\n`)
-    redditPosts.forEach((post, index) => {
-      sections.push(
-        `[Reddit Post ${index + 1}${post.score ? ` — ${post.score} upvotes` : ''}]\n` +
-        `Title: ${post.title}\n` +
-        `Body: ${truncateText(post.body, 500)}\n` +
+        `Snippet: ${truncateText(article.body, 400)}\n` +
+        `URL: ${article.url}\n` +
         `---\n`
       )
     })
