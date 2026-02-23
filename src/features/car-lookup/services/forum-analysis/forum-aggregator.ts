@@ -64,7 +64,8 @@ export async function analyzeCarReliability(
   })
 
   // STEP 4: Validate we have enough data
-  if (totalSources === 0) {
+  // NHTSA returning 0 complaints is valid ("no complaints on record") — only fail if Brave also found nothing
+  if (webArticles.length === 0 && nhtsaData.sources.length === 0 && !nhtsaData.summary) {
     throw new Error(
       `No data found for ${year} ${make} ${model}. ` +
       'This car may be too obscure or the model/year combination may not exist.'

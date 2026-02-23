@@ -18,6 +18,15 @@ interface BraveResponse {
   }
 }
 
+// Convert "AUDI" / "A3" to "Audi" / "A3" for natural search queries
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 // Fetch web articles about a specific car using Brave Search
 export async function fetchBraveArticles(
   make: string,
@@ -31,13 +40,17 @@ export async function fetchBraveArticles(
     return []
   }
 
-  // Query 1: target authoritative automotive review sites directly
-  const authorityQuery = `"${year} ${make} ${model}" site:caranddriver.com OR site:motortrend.com OR site:cars.com OR site:kbb.com OR site:edmunds.com`
+  // Normalise case: "AUDI" → "Audi", "A3" stays "A3"
+  const makeName = toTitleCase(make)
+  const modelName = toTitleCase(model)
 
-  // Query 2: reliability & owner experience — Reddit allowed so Brave surfaces the best threads
-  const reliabilityQuery = `${year} ${make} ${model} reliability owner experience problems`
+  // Query 1: professional review-focused — authority sites naturally rank for "[year] [make] [model] review"
+  const authorityQuery = `${year} ${makeName} ${modelName} review expert rating`
 
-  console.log(`[Brave] Running 2 targeted queries for ${year} ${make} ${model}`)
+  // Query 2: reliability & owner experience — Reddit and forums allowed
+  const reliabilityQuery = `${year} ${makeName} ${modelName} reliability owner experience problems`
+
+  console.log(`[Brave] Running 2 targeted queries for ${year} ${makeName} ${modelName}`)
 
   try {
     // Run both queries sequentially (rate limiter: 1 req/sec)
@@ -60,7 +73,7 @@ export async function fetchBraveArticles(
       }
     }
 
-    console.log(`[Brave] Found ${merged.length} unique articles (authority: ${authorityArticles?.length ?? 0}, reliability: ${reliabilityArticles?.length ?? 0})`)
+    console.log(`[Brave] Found ${merged.length} unique articles for ${year} ${makeName} ${modelName} (authority: ${authorityArticles?.length ?? 0}, reliability: ${reliabilityArticles?.length ?? 0})`)
     return merged
   } catch (error) {
     console.error('[Brave] Search failed:', error instanceof Error ? error.message : 'Unknown error')
