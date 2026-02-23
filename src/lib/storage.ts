@@ -5,6 +5,8 @@ import type { Car } from '@/types'
 const STORAGE_KEYS = {
   SEARCH_HISTORY: 'projectgarage_search_history',
   RECENT_CARS: 'projectgarage_recent_cars',
+  COMPARISON_HISTORY: 'projectgarage_comparison_history',
+  SIDEBAR_OPEN: 'projectgarage_sidebar_open',
 } as const
 
 const MAX_HISTORY_ITEMS = 10
@@ -73,6 +75,62 @@ export function addToSearchHistory(car: Car): void {
 export function clearSearchHistory(): void {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(STORAGE_KEYS.SEARCH_HISTORY)
+}
+
+// Comparison history management
+export interface ComparisonHistoryItem {
+  id: string           // unique ID (timestamp + random suffix)
+  cars: Car[]          // 2-3 cars in the comparison
+  comparedAt: string   // ISO timestamp
+}
+
+export function getComparisonHistory(): ComparisonHistoryItem[] {
+  return getItem<ComparisonHistoryItem[]>(STORAGE_KEYS.COMPARISON_HISTORY) || []
+}
+
+export function addToComparisonHistory(cars: Car[]): void {
+  const history = getComparisonHistory()
+
+  // Deduplicate: same set of cars (order-insensitive)
+  const incomingKey = [...cars]
+    .map(c => `${c.year}-${c.make}-${c.model}-${c.trim ?? ''}`)
+    .sort()
+    .join('|')
+
+  const existingIndex = history.findIndex(item => {
+    const key = [...item.cars]
+      .map(c => `${c.year}-${c.make}-${c.model}-${c.trim ?? ''}`)
+      .sort()
+      .join('|')
+    return key === incomingKey
+  })
+
+  if (existingIndex !== -1) {
+    history.splice(existingIndex, 1)
+  }
+
+  const newItem: ComparisonHistoryItem = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    cars,
+    comparedAt: new Date().toISOString(),
+  }
+  history.unshift(newItem)
+
+  setItem(STORAGE_KEYS.COMPARISON_HISTORY, history.slice(0, MAX_HISTORY_ITEMS))
+}
+
+export function clearComparisonHistory(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(STORAGE_KEYS.COMPARISON_HISTORY)
+}
+
+// Sidebar open/closed state
+export function getSidebarOpen(): boolean {
+  return getItem<boolean>(STORAGE_KEYS.SIDEBAR_OPEN) ?? false
+}
+
+export function setSidebarOpen(value: boolean): void {
+  setItem(STORAGE_KEYS.SIDEBAR_OPEN, value)
 }
 
 // Recent cars cache (for quick access)

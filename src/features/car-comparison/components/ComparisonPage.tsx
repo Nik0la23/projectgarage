@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useComparison } from '../hooks/use-comparison'
+import { useComparisonHistory } from '@/features/history-sidebar'
 import { CarSelector } from './CarSelector'
 import { SpecsComparisonTable } from './SpecsComparisonTable'
 import { ComparisonAnalysis } from './ComparisonAnalysis'
@@ -23,11 +24,27 @@ export function ComparisonPage() {
     fetchComparison,
     reset,
   } = useComparison()
+  const { addComparison } = useComparisonHistory()
 
-  // Pre-populate first car from URL parameter
+  // Pre-populate cars from URL parameters (runs once on mount)
+  // Supports: ?car1=<Car> (single car, existing behaviour)
+  //       and ?cars=<Car[]> (multi-car array, set by history sidebar)
   useEffect(() => {
+    const carsParam = searchParams.get('cars')
     const car1Param = searchParams.get('car1')
-    if (car1Param) {
+
+    if (carsParam) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(carsParam))
+        if (Array.isArray(parsed)) {
+          parsed.forEach(car => {
+            if (car.make && car.model && car.year) addCar(car)
+          })
+        }
+      } catch (e) {
+        console.error('[ComparisonPage] Failed to parse cars param:', e)
+      }
+    } else if (car1Param) {
       try {
         const car = JSON.parse(decodeURIComponent(car1Param))
         if (car.make && car.model && car.year) {
@@ -40,6 +57,14 @@ export function ComparisonPage() {
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Save comparison to history when results arrive
+  useEffect(() => {
+    if (comparisonData && comparisonData.cars.length >= 2) {
+      addComparison(comparisonData.cars)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comparisonData])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">

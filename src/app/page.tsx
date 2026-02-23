@@ -2,9 +2,9 @@
 
 // Main landing page with car search and specs display
 
-import { useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { GitCompare } from 'lucide-react'
 import { CarSearchForm, CarSpecsPanel, CarReliabilityPanel, CarYouTubePanel } from '@/features/car-lookup'
@@ -12,8 +12,9 @@ import { useCarData } from '@/features/car-lookup/hooks/use-car-data'
 import { useSearchHistory } from '@/features/car-lookup/hooks/use-search-history'
 import type { Car } from '@/types'
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectedCar, setSelectedCar] = useState<Car | null>(null)
   const { specs } = useCarData({
     make: selectedCar?.make || null,
@@ -27,6 +28,23 @@ export default function HomePage() {
     setSelectedCar(car)
     addSearch(car)
   }
+
+  // Load car from ?car= URL param (set by history sidebar clicks)
+  useEffect(() => {
+    const carParam = searchParams.get('car')
+    if (!carParam) return
+    try {
+      const car: Car = JSON.parse(decodeURIComponent(carParam))
+      if (car.make && car.model && car.year) {
+        handleSearch(car)
+        // Clean up the URL param without causing a re-render loop
+        router.replace('/', { scroll: false })
+      }
+    } catch {
+      // Malformed param — ignore silently
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleReset = () => {
     setSelectedCar(null)
@@ -123,5 +141,15 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" />
+    }>
+      <HomePageContent />
+    </Suspense>
   )
 }
