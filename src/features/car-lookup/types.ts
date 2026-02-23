@@ -32,7 +32,7 @@ export interface FetchSpecsParams {
 export interface ForumSource {
   title: string
   body: string
-  sourceType: 'reddit' | 'edmunds' | 'web-article'
+  sourceType: 'reddit' | 'edmunds' | 'web-article' | 'nhtsa-complaint'
   score?: number        // Reddit upvotes or Edmunds rating
   rating?: number       // Edmunds star rating (1-5)
   url: string
@@ -40,29 +40,31 @@ export interface ForumSource {
 
 export interface CarAnalysisResult {
   // Analysis results
-  commonProblems: Array<{ issue: string; sources: string[] }>
+  commonProblems: Array<{ issue: string; frequency: string; sources: string[] }>
   whatOwnersLove: string[]
   whatOwnersHate: string[]
   standoutFeatures: string[]  // Cool features, technology, design highlights
   reliabilityScore: number  // 1-10
   expertVsOwner: string     // Comparison text
   overallVerdict: string
-  
+
   // Metadata
   sourceCounts: {
     reddit: number
     edmunds: number
     webArticles: number
+    nhtsaComplaints?: number
     total: number
   }
-  
+
   // Raw sources with links
   rawSources?: {
     reddit: ForumSource[]
     edmunds: ForumSource[]
     webArticles: ForumSource[]
+    nhtsa?: ForumSource[]
   }
-  
+
   rawAnalysis?: string      // Full AI response for debugging
   dataSource: 'ai-generated'
   analyzedAt: string        // ISO timestamp

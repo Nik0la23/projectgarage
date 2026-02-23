@@ -1,5 +1,5 @@
 // Groq AI analyzer for car reliability insights
-// Analyzes aggregated forum/article data and provides structured insights
+// Analyzes aggregated data from Reddit, Brave web articles, and NHTSA official complaints
 
 import type { ForumSource, CarAnalysisResult } from '@/features/car-lookup/types'
 
@@ -16,25 +16,24 @@ interface AnalysisInput {
   model: string
   year: number
   redditPosts: ForumSource[]
-  edmundsReviews: ForumSource[]
   webArticles: ForumSource[]
+  nhtsaComplaints: ForumSource[]
+  nhtsaSummary: string  // Pre-built statistical summary from NHTSA source
 }
 
 // Analyze car reliability using Groq AI
 export async function analyzeCarReliability(
   input: AnalysisInput
 ): Promise<CarAnalysisResult> {
-  const { make, model, year, redditPosts, edmundsReviews, webArticles } = input
+  const { make, model, year, redditPosts, webArticles, nhtsaComplaints, nhtsaSummary } = input
 
-  // Check if Groq API key is configured
   const apiKey = process.env.GROQ_API_KEY
-
   if (!apiKey) {
     throw new Error('GROQ_API_KEY not configured')
   }
 
-  // Format sources for AI analysis
-  const formattedSources = formatSourcesForAI(redditPosts, edmundsReviews, webArticles)
+  // Format all sources into a single prompt block
+  const formattedSources = formatSourcesForAI(redditPosts, webArticles, nhtsaComplaints, nhtsaSummary)
 
   // Check estimated token count (rough estimate: chars / 4)
   const estimatedTokens = formattedSources.length / 4
@@ -42,53 +41,65 @@ export async function analyzeCarReliability(
     console.warn(`[Groq] Large input: ~${Math.round(estimatedTokens)} tokens (may be truncated)`)
   }
 
-  // Build prompts
-  const systemPrompt = `You are an expert automotive analyst specializing in car reliability, features, and owner satisfaction.
+  const systemPrompt = `You are an expert automotive analyst. Your job is to provide accurate, well-structured reliability and ownership assessments based on real data sources.
 
-Your task is to analyze discussions from car owners and automotive experts to provide accurate, data-driven insights about both reliability AND what makes this car special.
-
-Key principles:
-- Always cite specific sources when mentioning problems or praise
-- Distinguish between owner opinions and expert reviews
-- Be specific about issues (not vague like "some reliability problems")
-- Base reliability score on sentiment, frequency of issues, and severity
-- Highlight standout features, technology, and design elements that make the car appealing
-- Include both practical reliability aspects AND exciting features/technology
-- If data is limited, acknowledge this in your verdict
+CRITICAL RULES FOR RELIABILITY ASSESSMENT:
+1. Scale matters — a vehicle model may have hundreds of thousands of units in service. 5 complaints is not a widespread problem; 500 complaints might be.
+2. Only list something as a "commonProblems" entry if it appears in at LEAST 2 independent sources OR shows up in 3+ NHTSA complaints for the same component.
+3. A single Reddit post or one NHTSA complaint is an isolated incident, not a fleet-wide issue. Do NOT report it as a common problem.
+4. Official NHTSA recalls are mandatory safety campaigns — always report these regardless of volume; they are the highest-severity signal.
+5. Assign each problem a frequency label based on evidence weight:
+   - "isolated reports": mentioned by 1-2 people, no pattern across sources
+   - "recurring pattern": mentioned independently by 3-5 sources or owners
+   - "widespread concern": appears consistently across multiple source types (Reddit + NHTSA + Web) or has a high NHTSA complaint count
+6. The reliabilityScore (1-10) must reflect the overall ownership experience at scale — not just whether any problems exist. A car with minor issues reported by very few owners out of many thousands should still score 7-9.
+7. If the data shows mostly positive owner experiences with few complaints, say so clearly. Do not manufacture problems.
 
 Return ONLY valid JSON, no other text.`
 
-  const userPrompt = `Analyze this ${year} ${make} ${model} based on the following sources:
+  const userPrompt = `Analyze the ${year} ${make} ${model} based on the following data sources:
 
 ${formattedSources}
 
-Provide a comprehensive analysis covering BOTH reliability AND standout features in JSON format:
+Return a JSON object with this exact structure:
 
 {
   "commonProblems": [
-    {"issue": "specific problem description", "sources": ["Reddit", "Edmunds", "Web Articles"]}
+    {
+      "issue": "Clear, specific description of the problem (e.g., 'Engine oil consumption above 1 quart per 1000 miles')",
+      "frequency": "isolated reports | recurring pattern | widespread concern",
+      "sources": ["NHTSA (X complaints)", "Reddit", "Web Articles"]
+    }
   ],
-  "reliabilityScore": 1-10 (integer, where 1=very unreliable, 10=very reliable),
-  "whatOwnersLove": ["specific positive point 1", "specific positive point 2"],
-  "whatOwnersHate": ["specific negative point 1", "specific negative point 2"],
-  "standoutFeatures": ["cool feature/tech 1", "cool feature/tech 2", "cool feature/tech 3"],
-  "expertVsOwner": "brief comparison of expert opinions vs owner experiences",
-  "overallVerdict": "2-3 sentence summary of whether this car is worth buying and why"
+  "reliabilityScore": <integer 1-10, where 1=extremely unreliable with major systemic issues, 10=exceptional reliability with virtually no reported problems>,
+  "whatOwnersLove": [
+    "Specific positive — e.g., 'Turbocharged 2.0L engine delivers strong 0-60 times around 6.5 seconds'"
+  ],
+  "whatOwnersHate": [
+    "Specific negative — e.g., 'Infotainment system slow to respond and prone to freezing on cold starts'"
+  ],
+  "standoutFeatures": [
+    "Specific feature — e.g., 'Virtual Cockpit digital instrument cluster with configurable 12-inch display'"
+  ],
+  "expertVsOwner": "1-2 sentences: how do professional reviewer opinions differ from day-to-day owner experience?",
+  "overallVerdict": "2-3 sentences giving a balanced buying recommendation. Mention reliability in context of scale (e.g., 'complaints represent a small fraction of the fleet'). Be direct about whether this car is worth buying."
 }
 
-IMPORTANT for standoutFeatures:
-- Include technology features (infotainment, safety tech, driver aids)
-- Include design highlights (interior quality, exterior styling)
-- Include performance characteristics (handling, power, efficiency)
-- Include comfort and convenience features (seats, space, amenities)
-- Be specific (e.g., "Adaptive cruise control with lane centering" not just "good tech")
+Rules for commonProblems:
+- If no qualifying problems exist, return an empty array []
+- Always include official recalls as entries with frequency "widespread concern" (recalls affect all units)
+- Do NOT include speculative or vague problems
 
-Be specific and actionable. If no significant problems found, say so.`
+Rules for reliabilityScore:
+- 9-10: Excellent. Very few complaints, no systemic issues, positive owner sentiment dominates
+- 7-8: Good. Minor issues reported by a small percentage of owners, nothing structural
+- 5-6: Average. Some recurring issues affecting a noticeable portion of owners
+- 3-4: Below average. Multiple documented problems, significant owner frustration
+- 1-2: Poor. Systemic, serious issues affecting a large portion of the fleet`
 
   console.log(`[Groq] Analyzing ${year} ${make} ${model}...`)
 
   try {
-    // Call Groq API
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -96,12 +107,12 @@ Be specific and actionable. If no significant problems found, say so.`
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile', // Updated model (mixtral-8x7b-32768 decommissioned)
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.3, // Lower temperature for more factual responses
+        temperature: 0.2,  // Very low — we want factual, consistent output
         max_tokens: 2000,
         response_format: { type: 'json_object' },
       }),
@@ -120,22 +131,18 @@ Be specific and actionable. If no significant problems found, say so.`
       throw new Error('No content in Groq response')
     }
 
-    // Parse the JSON response
     let analysisData: Partial<CarAnalysisResult>
     try {
-      // Remove markdown code blocks if present
       const cleanContent = content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim()
-      
       analysisData = JSON.parse(cleanContent)
     } catch (parseError) {
       console.error('[Groq] Failed to parse AI response:', content)
       throw new Error('Invalid JSON from AI')
     }
 
-    // Build final result with metadata
     const result: CarAnalysisResult = {
       commonProblems: analysisData.commonProblems || [],
       whatOwnersLove: analysisData.whatOwnersLove || [],
@@ -146,21 +153,23 @@ Be specific and actionable. If no significant problems found, say so.`
       overallVerdict: analysisData.overallVerdict || 'Insufficient data for verdict',
       sourceCounts: {
         reddit: redditPosts.length,
-        edmunds: edmundsReviews.length,
+        edmunds: 0,
         webArticles: webArticles.length,
-        total: redditPosts.length + edmundsReviews.length + webArticles.length,
+        nhtsaComplaints: nhtsaComplaints.length,
+        total: redditPosts.length + webArticles.length + nhtsaComplaints.length,
       },
       rawSources: {
         reddit: redditPosts,
-        edmunds: edmundsReviews,
+        edmunds: [],
         webArticles: webArticles,
+        nhtsa: nhtsaComplaints,
       },
-      rawAnalysis: content, // Store for debugging
+      rawAnalysis: content,
       dataSource: 'ai-generated',
       analyzedAt: new Date().toISOString(),
     }
 
-    console.log(`[Groq] Analysis complete - Reliability Score: ${result.reliabilityScore}/10`)
+    console.log(`[Groq] Analysis complete — Reliability Score: ${result.reliabilityScore}/10, Problems: ${result.commonProblems.length}`)
 
     return result
   } catch (error) {
@@ -169,52 +178,55 @@ Be specific and actionable. If no significant problems found, say so.`
   }
 }
 
-// Format sources into a readable format for AI
+// Format all sources into a readable block for the AI prompt
 function formatSourcesForAI(
   redditPosts: ForumSource[],
-  edmundsReviews: ForumSource[],
-  webArticles: ForumSource[]
+  webArticles: ForumSource[],
+  nhtsaComplaints: ForumSource[],
+  nhtsaSummary: string
 ): string {
   const sections: string[] = []
 
-  // Reddit section
-  if (redditPosts.length > 0) {
-    sections.push(`=== REDDIT DISCUSSIONS (${redditPosts.length} posts) ===\n`)
-    
-    redditPosts.forEach((post, index) => {
+  // NHTSA statistical summary first — gives the AI the scale context before reading individual posts
+  if (nhtsaSummary) {
+    sections.push(nhtsaSummary)
+  }
+
+  // Individual NHTSA complaint entries
+  if (nhtsaComplaints.length > 0) {
+    sections.push(`--- Top NHTSA Complaints & Recalls ---\n`)
+    nhtsaComplaints.forEach((item, index) => {
       sections.push(
-        `[Reddit Post ${index + 1} - ${post.score || 0} upvotes]\n` +
-        `Title: ${post.title}\n` +
-        `Body: ${truncateText(post.body, 500)}\n` +
+        `[NHTSA Entry ${index + 1}]\n` +
+        `Title: ${item.title}\n` +
+        `Detail: ${truncateText(item.body, 400)}\n` +
         `---\n`
       )
     })
   }
 
-  // Edmunds section
-  if (edmundsReviews.length > 0) {
-    sections.push(`\n=== EDMUNDS REVIEWS (${edmundsReviews.length} reviews) ===\n`)
-    
-    edmundsReviews.forEach((review, index) => {
-      sections.push(
-        `[Edmunds Review ${index + 1}${review.rating ? ` - ${review.rating}/5 stars` : ''}]\n` +
-        `Title: ${review.title}\n` +
-        `Body: ${truncateText(review.body, 500)}\n` +
-        `---\n`
-      )
-    })
-  }
-
-  // Web articles section
+  // Web articles from authoritative automotive sources
   if (webArticles.length > 0) {
-    sections.push(`\n=== WEB ARTICLES (${webArticles.length} articles) ===\n`)
-    
+    sections.push(`\n=== WEB ARTICLES FROM AUTOMOTIVE SOURCES (${webArticles.length} articles) ===\n`)
     webArticles.forEach((article, index) => {
       sections.push(
         `[Article ${index + 1}]\n` +
         `Title: ${article.title}\n` +
-        `Snippet: ${truncateText(article.body, 300)}\n` +
+        `Snippet: ${truncateText(article.body, 350)}\n` +
         `Source: ${article.url}\n` +
+        `---\n`
+      )
+    })
+  }
+
+  // Reddit owner discussions
+  if (redditPosts.length > 0) {
+    sections.push(`\n=== REDDIT OWNER DISCUSSIONS (${redditPosts.length} posts) ===\n`)
+    redditPosts.forEach((post, index) => {
+      sections.push(
+        `[Reddit Post ${index + 1}${post.score ? ` — ${post.score} upvotes` : ''}]\n` +
+        `Title: ${post.title}\n` +
+        `Body: ${truncateText(post.body, 500)}\n` +
         `---\n`
       )
     })
@@ -223,10 +235,7 @@ function formatSourcesForAI(
   return sections.join('\n')
 }
 
-// Truncate text to a maximum length
 function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) {
-    return text
-  }
+  if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
 }

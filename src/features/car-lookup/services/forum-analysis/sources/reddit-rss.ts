@@ -4,14 +4,48 @@
 import { redditQueue } from '../rate-limiter'
 import type { ForumSource } from '@/features/car-lookup/types'
 
-const CAR_SUBREDDITS = [
+const BASE_SUBREDDITS = [
   'cars',
   'whatcarshouldIbuy',
   'askcarsales',
   'mechanicadvice',
   'cartalk',
   'UsedCars',
-] as const
+]
+
+// Brand-specific subreddits — these have the most detailed ownership threads
+const BRAND_SUBREDDITS: Record<string, string> = {
+  'acura': 'Acura',
+  'audi': 'Audi',
+  'bmw': 'BMW',
+  'buick': 'Buick',
+  'cadillac': 'Cadillac',
+  'chevrolet': 'Chevrolet',
+  'chrysler': 'Chrysler',
+  'dodge': 'Dodge',
+  'ford': 'Ford',
+  'genesis': 'GenesisMotors',
+  'gmc': 'gmctrucks',
+  'honda': 'Honda',
+  'hyundai': 'hyundai',
+  'infiniti': 'infiniti',
+  'jeep': 'Jeep',
+  'kia': 'kia',
+  'land rover': 'landrover',
+  'lexus': 'Lexus',
+  'lincoln': 'lincolnmotors',
+  'mazda': 'mazda',
+  'mercedes-benz': 'mercedes_benz',
+  'mitsubishi': 'mitsubishi',
+  'nissan': 'Nissan',
+  'porsche': 'Porsche',
+  'ram': 'ram_trucks',
+  'subaru': 'subaru',
+  'tesla': 'teslamotors',
+  'toyota': 'Toyota',
+  'volkswagen': 'Volkswagen',
+  'volvo': 'Volvo',
+}
 
 // Fetch Reddit discussions using RSS feed
 export async function fetchRedditDiscussionsRSS(
@@ -19,13 +53,21 @@ export async function fetchRedditDiscussionsRSS(
   model: string,
   year: number
 ): Promise<ForumSource[]> {
-  const searchQuery = `${year} ${make} ${model}`
+  // Targeted query — matches ownership and reliability threads, not just car mentions
+  const searchQuery = `${make} ${model} ${year} reliability problems`
   const allPosts: ForumSource[] = []
 
-  console.log(`[Reddit-RSS] Searching for: "${searchQuery}"`)
+  // Build subreddit list: base + brand-specific if known
+  const subreddits = [...BASE_SUBREDDITS]
+  const brandSub = BRAND_SUBREDDITS[make.toLowerCase()]
+  if (brandSub && !subreddits.includes(brandSub)) {
+    subreddits.push(brandSub)
+  }
+
+  console.log(`[Reddit-RSS] Searching for: "${searchQuery}" across ${subreddits.length} subreddits`)
 
   // Fetch from each subreddit
-  for (const subreddit of CAR_SUBREDDITS) {
+  for (const subreddit of subreddits) {
     try {
       const posts = await redditQueue.add(async () => {
         return await fetchFromSubredditRSS(subreddit, searchQuery, make, model)

@@ -1,10 +1,9 @@
 // Main orchestrator for forum/article analysis
 // Coordinates all data sources, caching, and AI analysis
 
-import { fetchRedditDiscussions } from './sources/reddit'
 import { fetchRedditDiscussionsRSS } from './sources/reddit-rss'
 import { fetchBraveArticles } from './sources/brave'
-import { fetchEdmundsReviews } from './sources/edmunds'
+import { fetchNHTSAComplaints } from './sources/nhtsa-complaints'
 import { analyzeCarReliability as runGroqAnalysis } from './groq-analyzer'
 import { getCachedAnalysis, saveCachedAnalysis } from './cache-manager'
 import type { CarAnalysisResult, ForumSource } from '@/features/car-lookup/types'
@@ -28,51 +27,45 @@ export async function analyzeCarReliability(
 
   // STEP 2: Fetch from all sources in parallel (using Promise.allSettled)
   console.log('[Orchestrator] Fetching data from all sources in parallel...')
-  
+
   const startTime = Date.now()
-  
+
   const results = await Promise.allSettled([
-    // Try RSS fallback first (less likely to be blocked on Vercel)
     fetchRedditDiscussionsRSS(make, model, year),
     fetchBraveArticles(make, model, year),
-    fetchEdmundsReviews(make, model, year),
+    fetchNHTSAComplaints(make, model, year),
   ])
 
   const fetchDuration = Date.now() - startTime
   console.log(`[Orchestrator] Data fetching completed in ${fetchDuration}ms`)
 
   // STEP 3: Extract successful results or use empty arrays for failures
-  const redditPosts: ForumSource[] = 
+  const redditPosts: ForumSource[] =
     results[0].status === 'fulfilled' ? results[0].value : []
-  
-  const webArticles: ForumSource[] = 
+
+  const webArticles: ForumSource[] =
     results[1].status === 'fulfilled' ? results[1].value : []
-  
-  const edmundsReviews: ForumSource[] = 
-    results[2].status === 'fulfilled' ? results[2].value : []
+
+  const nhtsaData =
+    results[2].status === 'fulfilled'
+      ? results[2].value
+      : { sources: [], summary: '' }
 
   // Log any failures with detailed information
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
-      const sourceName = ['Reddit', 'Brave', 'Edmunds'][index]
+      const sourceName = ['Reddit', 'Brave', 'NHTSA'][index]
       console.error(`[Orchestrator] ${sourceName} failed:`, result.reason)
-      if (result.reason instanceof Error) {
-        console.error(`[Orchestrator] ${sourceName} error details:`, {
-          name: result.reason.name,
-          message: result.reason.message,
-          stack: result.reason.stack
-        })
-      }
     }
   })
 
   // Calculate total sources
-  const totalSources = redditPosts.length + webArticles.length + edmundsReviews.length
+  const totalSources = redditPosts.length + webArticles.length + nhtsaData.sources.length
 
   console.log('[Orchestrator] Source counts:', {
     reddit: redditPosts.length,
     brave: webArticles.length,
-    edmunds: edmundsReviews.length,
+    nhtsaComplaints: nhtsaData.sources.length,
     total: totalSources,
   })
 
@@ -86,16 +79,17 @@ export async function analyzeCarReliability(
 
   // STEP 5: Analyze with Groq AI
   console.log('[Orchestrator] Analyzing data with Groq AI...')
-  
+
   const analysisStartTime = Date.now()
-  
+
   const analysis = await runGroqAnalysis({
     make,
     model,
     year,
     redditPosts,
-    edmundsReviews,
     webArticles,
+    nhtsaComplaints: nhtsaData.sources,
+    nhtsaSummary: nhtsaData.summary,
   })
 
   const analysisDuration = Date.now() - analysisStartTime
@@ -108,6 +102,5 @@ export async function analyzeCarReliability(
   const totalDuration = Date.now() - startTime
   console.log(`\n=== Analysis Complete (total: ${totalDuration}ms) ===\n`)
 
-  // STEP 7: Return complete analysis
   return analysis
 }

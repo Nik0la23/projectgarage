@@ -3,7 +3,10 @@
 // CRITICAL: Respects rate limits and includes anti-detection measures
 
 import * as cheerio from 'cheerio'
-import { edmundsQueue, randomDelay, getHumanLikeHeaders } from '../rate-limiter'
+import { randomDelay, getHumanLikeHeaders } from '../rate-limiter'
+import PQueue from 'p-queue'
+// Edmunds is no longer used in the pipeline (replaced by NHTSA + Brave multi-query)
+const edmundsQueue = new PQueue({ interval: 3000, intervalCap: 1 })
 import type { ForumSource } from '@/features/car-lookup/types'
 
 // Track if Edmunds has blocked us or rate limited us

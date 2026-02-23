@@ -1,5 +1,7 @@
 // Brave Search API integration for web articles
-// Uses Brave's free tier search API
+// Runs two targeted queries:
+//   1. Authority automotive sites (Car and Driver, Motor Trend, KBB, Cars.com, Edmunds)
+//   2. General reliability/owner review search
 
 import { braveQueue } from '../rate-limiter'
 import type { ForumSource } from '@/features/car-lookup/types'
@@ -29,22 +31,39 @@ export async function fetchBraveArticles(
     return []
   }
 
-  // Build search query (exclude Reddit since we fetch that separately)
-  const searchQuery = `${year} ${make} ${model} reliability review problems -site:reddit.com`
+  // Query 1: target authoritative automotive review sites directly
+  const authorityQuery = `"${year} ${make} ${model}" site:caranddriver.com OR site:motortrend.com OR site:cars.com OR site:kbb.com OR site:edmunds.com`
 
-  console.log(`[Brave] Searching for: "${searchQuery}"`)
+  // Query 2: general reliability & owner experience search
+  const reliabilityQuery = `${year} ${make} ${model} reliability owner problems long-term -site:reddit.com`
+
+  console.log(`[Brave] Running 2 targeted queries for ${year} ${make} ${model}`)
 
   try {
-    // Use rate limiter queue
-    const articles = await braveQueue.add(async () => {
-      return await performBraveSearch(searchQuery, apiKey)
+    // Run both queries sequentially (rate limiter: 1 req/sec)
+    const authorityArticles = await braveQueue.add(async () => {
+      return await performBraveSearch(authorityQuery, apiKey, 5)
     })
 
-    console.log(`[Brave] Found ${articles.length} articles`)
-    return articles
+    const reliabilityArticles = await braveQueue.add(async () => {
+      return await performBraveSearch(reliabilityQuery, apiKey, 5)
+    })
+
+    // Merge and deduplicate by URL
+    const seen = new Set<string>()
+    const merged: ForumSource[] = []
+
+    for (const article of [...(authorityArticles ?? []), ...(reliabilityArticles ?? [])]) {
+      if (!seen.has(article.url)) {
+        seen.add(article.url)
+        merged.push(article)
+      }
+    }
+
+    console.log(`[Brave] Found ${merged.length} unique articles (authority: ${authorityArticles?.length ?? 0}, reliability: ${reliabilityArticles?.length ?? 0})`)
+    return merged
   } catch (error) {
     console.error('[Brave] Search failed:', error instanceof Error ? error.message : 'Unknown error')
-    // Return empty array on failure (graceful degradation)
     return []
   }
 }
@@ -52,13 +71,12 @@ export async function fetchBraveArticles(
 // Perform the actual Brave Search API call
 async function performBraveSearch(
   query: string,
-  apiKey: string
+  apiKey: string,
+  count: number
 ): Promise<ForumSource[]> {
   const url = new URL('https://api.search.brave.com/res/v1/web/search')
-  
-  // Query parameters
   url.searchParams.set('q', query)
-  url.searchParams.set('count', '10') // Limit to 10 results
+  url.searchParams.set('count', count.toString())
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -75,10 +93,8 @@ async function performBraveSearch(
   const data: BraveResponse = await response.json()
   const articles: ForumSource[] = []
 
-  // Parse results
   if (data.web && data.web.results) {
     for (const result of data.web.results) {
-      // Skip results with no description
       if (!result.description || result.description.length < 20) {
         continue
       }

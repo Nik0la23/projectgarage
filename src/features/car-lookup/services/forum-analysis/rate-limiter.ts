@@ -15,12 +15,6 @@ export const braveQueue = new PQueue({
   intervalCap: 1,
 })
 
-// Edmunds queue: 1 request per 3 seconds (very conservative to avoid bans)
-export const edmundsQueue = new PQueue({
-  interval: 3000,
-  intervalCap: 1,
-})
-
 // Random human-like delay between 1-3 seconds
 export function randomDelay(): Promise<void> {
   const baseDelay = 1000 // 1 second base
@@ -63,6 +57,5 @@ export function logQueueStats() {
   console.log('Rate Limiter Stats:', {
     reddit: { pending: redditQueue.pending, size: redditQueue.size },
     brave: { pending: braveQueue.pending, size: braveQueue.size },
-    edmunds: { pending: edmundsQueue.pending, size: edmundsQueue.size },
   })
 }
